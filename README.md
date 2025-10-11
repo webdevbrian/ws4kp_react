@@ -13,36 +13,41 @@ Nostalgia. And I enjoy following the weather, especially severe storms.
 It's also a creative outlet for me and keeps my programming skills honed for when I need them for my day job.
 
 ### Included technology
-I've kept this open source, well commented, and made it as library-free as possible to help others interested in programming be able to jump right in and start working with the code.
+This repository has been refactored to use a modern frontend stack while keeping the server-side caching proxy and data pipeline:
 
-From a learning standpoint, this codebase make use of a lot of different methods and technologies common on the internet including:
+- React 18 (TypeScript) for the UI
+- Vite for fast local development and bundling
+- SCSS for styles (organized by display)
+- Express-based proxy/caching server for Weather.gov, SPC, radar, and other upstreams
+- The https://api.weather.gov REST API ([documentation](https://www.weather.gov/documentation/services-web-api))
+- Modern JavaScript (ES modules, async/await)
+- Linting/formatting to keep code quality consistent
 
-* The https://api.weather.gov REST API. ([documentation](https://www.weather.gov/documentation/services-web-api)).
-* ES 6 functionality
-	* Arrow functions
-	* Promises
-	* Async/await and parallel loading of all forecast resources
-	* Classes and extensions
-	* Javascript modules
-* Separation between API code and user interface code
-* Use of a modern date parsing library [luxon](https://moment.github.io/luxon/)
-* Practical API rates and static asset caching
-* Very straight-forward hand written HTML
-* Build system integration (Gulp, Webpack) to reduce the number of scripts that need to be loaded
-* Hand written CSS made easier to mange with SASS
-* A linting library to keep code style consistent
-
-## Quck Start
+## Quick Start (Refactored React + Vite)
 
 Ensure you have Node installed.
+
 ```bash
 git clone https://github.com/netbymatt/ws4kp.git
 cd ws4kp
 npm install
-npm start
+
+# Terminal 1: start the API/proxy server (Express on 8080)
+npm run server
+
+# Terminal 2: start the React dev server (Vite on 3000)
+npm run dev
 ```
 
-Open your browser and navigate to https://localhost:8080
+Open your browser and navigate to:
+
+- App: http://localhost:3000
+- API server status: http://localhost:8080/api-info
+
+Notes:
+
+- The React app talks to the backend at http://localhost:8080 for API/proxy routes. Run both processes during development.
+- The backend enables CORS for http://localhost:3000.
 
 ## Does WeatherStar 4000+ work outside of the USA?
 
@@ -71,29 +76,27 @@ WeatherStar 4000+ supports two deployment modes:
 
 ## Other methods to run Ws4kp
 
-### Development Mode (individual JS files, easier debugging)
+### Development workflow
+
+- `npm run server`: starts the Express proxy/caching server on port 8080 (required)
+- `npm run dev`: starts the React/Vite dev server on port 3000
+
+Access the app at http://localhost:3000. The backend at port 8080 provides proxied data for Weather.gov, SPC, radar, mesonet, etc.
+
+### Production build
+
 ```bash
-npm start
+npm run build   # builds static assets into /dist via Vite
 ```
 
-### Development Mode without proxy caching
-```bash
-STATIC=1 npm start
-```
+You can serve the built assets with any static web server. If you need the caching proxy (recommended), run the Express server separately and configure the frontend to call it. The included `index.mjs` exposes:
 
-### Production Mode (minified/concatenated JS, faster loading)
-```bash
-npm run build
-DIST=1 npm start
-```
-
-### Production Mode without proxy caching (simulates static Docker deployment)
-```bash
-npm run build
-STATIC=1 DIST=1 npm start
-```
-
-For all modes, access WeatherStar by going to: http://localhost:8080/
+- `/api/*` (Weather.gov proxy)
+- `/spc/*` (SPC proxy)
+- `/radar/*` (radar proxy)
+- `/mesonet/*` (mesonet proxy)
+- `/forecast/*` (legacy forecast proxy)
+- `/playlist.json` (when server mode is used with music)
 
 ### Key Differences
 
@@ -144,33 +147,9 @@ services:
     restart: unless-stopped
 ```
 
-### Serving a static app
+### Serving the app
 
-There are several ways to deploy WeatherStar as a static app that runs entirely in the browser:
-
-**Manual static hosting (Apache, nginx, CDN, etc.):**
-Build static distribution files for upload to any web server:
-
-```bash
-npm run build
-```
-
-The resulting files in `/dist` can be uploaded to any web server; no server-side scripting is required.
-
-**Docker static deployment:**
-The default Docker image uses nginx to serve pre-built static files:
-
-```bash
-docker run -p 8080:8080 ghcr.io/netbymatt/ws4kp
-```
-
-**Node.js in static mode:**
-Use the Node.js server as a static file host without the caching proxy:
-
-```bash
-STATIC=1 npm start          # Use Express to serve development files
-STATIC=1 DIST=1 npm start   # Use Express to serve (minimized) production files
-```
+If you only serve the static frontend, API calls must go directly to upstream services and will be subject to browser CORS and rate limits. The recommended setup is to host the built React app and run the Express proxy server alongside it, then point the app at your proxy base URL.
 
 ## What's different
 
