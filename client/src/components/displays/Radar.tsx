@@ -138,8 +138,8 @@ const Radar: React.FC = () => {
       const cy = Math.max(0, Math.min(1, ny)) * totalH;
 
       // Compute dynamic zoom so a target geographic span fits the viewport
-      const targetLonSpan = 5; // tighter zoom
-      const targetLatSpan = 3; // tighter zoom
+      const targetLonSpan = 4; // tighter zoom
+      const targetLatSpan = 2.5;  // tighter zoom
       const conusLonSpan = (LON_MAX - LON_MIN);
       const conusLatSpan = (LAT_MAX - LAT_MIN);
       const visibleLonAtScale1 = conusLonSpan * (viewW / totalW);
@@ -180,7 +180,8 @@ const Radar: React.FC = () => {
           framesRef.current.style.height = h;
         }
       }
-      apply();
+      // Defer to next frame so DOM has applied sizes
+      requestAnimationFrame(apply);
     } else {
       let remaining = unloaded.length;
       const onLoadOrError = () => {
@@ -198,7 +199,7 @@ const Radar: React.FC = () => {
               framesRef.current.style.height = h;
             }
           }
-          apply();
+          requestAnimationFrame(apply);
         }
       };
       unloaded.forEach(img => {
@@ -208,10 +209,15 @@ const Radar: React.FC = () => {
     }
 
     window.addEventListener('resize', apply);
+    // Observe basemap size changes (e.g., fonts/metrics/UI changes)
+    const ro = new ResizeObserver(() => requestAnimationFrame(apply));
+    ro.observe(base);
     return () => {
       window.removeEventListener('resize', apply);
+      ro.disconnect();
     };
-  }, [region, location]);
+  // Re-run when location changes or when we toggle between tiles vs frames
+  }, [region, location, frameUrls.length]);
 
   return (
     <div className="display radar-display">
