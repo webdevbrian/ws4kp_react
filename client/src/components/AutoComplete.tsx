@@ -30,8 +30,16 @@ const AutoComplete = forwardRef<HTMLInputElement, AutoCompleteProps>(
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const debounceTimer = useRef<NodeJS.Timeout>();
+    // Prevents the dropdown from re-opening immediately after a selection updates the value
+    const suppressNextFetch = useRef(false);
 
     const fetchSuggestions = useCallback(async (query: string) => {
+      if (suppressNextFetch.current) {
+        suppressNextFetch.current = false;
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
       if (query.length < 3) {
         setSuggestions([]);
         return;
@@ -79,8 +87,11 @@ const AutoComplete = forwardRef<HTMLInputElement, AutoCompleteProps>(
     }, [value, fetchSuggestions]);
 
     const handleSelect = (suggestion: Suggestion) => {
-      onChange(suggestion.value);
+      // Close and suppress immediate re-open caused by value change debounced fetch
+      suppressNextFetch.current = true;
       setShowSuggestions(false);
+      setSuggestions([]);
+      onChange(suggestion.value);
       onSubmit(suggestion.value);
     };
 
@@ -121,6 +132,7 @@ const AutoComplete = forwardRef<HTMLInputElement, AutoCompleteProps>(
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={(e) => e.target.select()}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
           placeholder={placeholder}
           data-1p-ignore
         />

@@ -46,7 +46,13 @@ const NavigationControls: React.FC = () => {
 
   const handleScanlinesToggle = () => {
     setScanlines(!scanlines);
-    document.body.classList.toggle('scanlines', !scanlines);
+    // Apply scanlines only to the main display container, not the entire page
+    const container = document.getElementById('container');
+    if (container) {
+      container.classList.toggle('scanlines', !scanlines);
+    }
+    // Ensure body does not retain the class if it was previously applied
+    document.body.classList.remove('scanlines');
   };
 
   const isIOS = () => {
