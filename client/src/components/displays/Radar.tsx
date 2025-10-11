@@ -249,6 +249,21 @@ const Radar: React.FC = () => {
       </div>
       <div className="main radar" ref={viewRef}>
         <div className="container">
+          {/* Local SVG filter: convert near-black to transparency for Mesonet frames */}
+          <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden>
+            <defs>
+              <filter id="radarChroma" colorInterpolationFilters="sRGB">
+                {/* Put luminance into alpha channel */}
+                <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.2126 0.7152 0.0722 0 0" result="luma" />
+                {/* Boost contrast so very dark becomes alpha 0, colors become opaque */}
+                <feComponentTransfer in="luma" result="alpha">
+                  <feFuncA type="linear" slope="6" intercept="-0.15" />
+                </feComponentTransfer>
+                {/* Apply computed alpha to original color */}
+                <feComposite in="SourceGraphic" in2="alpha" operator="in" />
+              </filter>
+            </defs>
+          </svg>
           {region === 'hawaii' && (
             <div className="tiles" ref={tilesRef}>
               <img src="/images/maps/radar-hawaii.png" alt="Hawaii radar" />
@@ -278,12 +293,13 @@ const Radar: React.FC = () => {
                         style={{
                           position: 'absolute',
                           inset: 0,
-                          opacity: idx === frameIndex ? 0.75 : 0,
+                          opacity: idx === frameIndex ? 1 : 0,
                           transition: 'opacity 180ms linear',
                           width: '100%',
                           height: '100%',
                           objectFit: 'fill',
-                          mixBlendMode: 'screen',
+                          mixBlendMode: 'normal',
+                          filter: 'url(#radarChroma)',
                         }}
                       />
                     ))}
