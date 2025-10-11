@@ -110,7 +110,7 @@ const Radar: React.FC = () => {
     return () => clearInterval(t);
   }, [frameUrls]);
 
-  // Center on user location for CONUS by translating the tiles
+  // Center and zoom on user location for CONUS by translating and scaling the tiles
   useEffect(() => {
     if (region !== 'conus') return;
     const tiles = tilesRef.current;
@@ -137,18 +137,30 @@ const Radar: React.FC = () => {
       const cx = Math.max(0, Math.min(1, nx)) * totalW;
       const cy = Math.max(0, Math.min(1, ny)) * totalH;
 
-      // Translate so that (cx, cy) lands at the viewport center
-      let tx = Math.round(viewW / 2 - cx);
-      let ty = Math.round(viewH / 2 - cy);
+      // Compute dynamic zoom so a target geographic span fits the viewport
+      const targetLonSpan = 5; // tighter zoom
+      const targetLatSpan = 3; // tighter zoom
+      const conusLonSpan = (LON_MAX - LON_MIN);
+      const conusLatSpan = (LAT_MAX - LAT_MIN);
+      const visibleLonAtScale1 = conusLonSpan * (viewW / totalW);
+      const visibleLatAtScale1 = conusLatSpan * (viewH / totalH);
+      const scaleX = Math.max(1, visibleLonAtScale1 / targetLonSpan);
+      const scaleY = Math.max(1, visibleLatAtScale1 / targetLatSpan);
+      const scale = Math.min(scaleX, scaleY);
+
+      // Translate so that (cx, cy) lands at the viewport center after scaling
+      let tx = Math.round(viewW / 2 - cx * scale);
+      let ty = Math.round(viewH / 2 - cy * scale);
 
       // Clamp so the mosaic still covers the viewport
-      const minTx = Math.min(0, viewW - totalW);
-      const minTy = Math.min(0, viewH - totalH);
+      const minTx = Math.min(0, viewW - totalW * scale);
+      const minTy = Math.min(0, viewH - totalH * scale);
       const maxTx = 0;
       const maxTy = 0;
       tx = Math.max(minTx, Math.min(maxTx, tx));
       ty = Math.max(minTy, Math.min(maxTy, ty));
-      tiles.style.transform = `translate(${tx}px, ${ty}px)`;
+      tiles.style.transformOrigin = 'top left';
+      tiles.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
     };
 
     // Ensure images are loaded before measuring
