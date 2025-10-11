@@ -25,6 +25,61 @@ const Almanac: React.FC = () => {
   const [today, setToday] = useState<SunTimes>({});
   const [tomorrow, setTomorrow] = useState<SunTimes>({});
 
+  const moonFor = (d: Date) => {
+    // Simple moon phase approximation (0=new, 0.5=full)
+    const year = d.getUTCFullYear();
+    const month = d.getUTCMonth() + 1;
+    const day = d.getUTCDate();
+    let r = year % 100;
+    r %= 19;
+    if (r > 9) r -= 19;
+    r = ((r * 11) % 30) + month + day;
+    if (month < 3) r += 2;
+    const phaseIndex = (r < 0 ? r + 30 : r) / 30; // 0..1
+    return { phaseIndex };
+  };
+
+  const primaryPhaseFor = (phaseIndex: number) => {
+    // Map to nearest of New (0), First Quarter (0.25), Full (0.5), Last Quarter (0.75)
+    const targets = [
+      { key: 'new', v: 0, file: 'New-Moon.gif', label: 'New Moon' },
+      { key: 'first', v: 0.25, file: 'First-Quarter.gif', label: 'First Quarter' },
+      { key: 'full', v: 0.5, file: 'Full-Moon.gif', label: 'Full Moon' },
+      { key: 'last', v: 0.75, file: 'Last-Quarter.gif', label: 'Last Quarter' },
+    ];
+    const wrapDiff = (a: number, b: number) => {
+      const d = Math.abs(a - b);
+      return Math.min(d, 1 - d);
+    };
+    let best = targets[0];
+    let bestDiff = wrapDiff(phaseIndex, targets[0].v);
+    for (let i = 1; i < targets.length; i++) {
+      const diff = wrapDiff(phaseIndex, targets[i].v);
+      if (diff < bestDiff) {
+        best = targets[i];
+        bestDiff = diff;
+      }
+    }
+    return best;
+  };
+
+  const wrapDiff = (a: number, b: number) => {
+    const d = Math.abs(a - b);
+    return Math.min(d, 1 - d);
+  };
+
+  const findNextPhase = (start: Date, target: number) => {
+    const d = new Date(start);
+    for (let i = 0; i < 60; i++) {
+      const { phaseIndex } = moonFor(d);
+      if (wrapDiff(phaseIndex, target) <= 0.03) {
+        return new Date(d);
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    return null;
+  };
+
   useEffect(() => {
     if (!location) {
       setToday({});
@@ -95,6 +150,45 @@ const Almanac: React.FC = () => {
                   <div className="grid-item time" style={{ gridColumn: 3, gridRow: 2 }}>{toLocalTime(tomorrow.sunrise)}</div>
                   <div className="grid-item time" style={{ gridColumn: 3, gridRow: 3 }}>{toLocalTime(tomorrow.sunset)}</div>
                 </div>
+
+                <div className="moon">
+                  <div className="title">Moon</div>
+                  {(() => {
+                    const now = new Date();
+                    const items = [
+                      { label: 'New Moon', file: 'New-Moon.gif', v: 0 },
+                      { label: 'First Quarter', file: 'First-Quarter.gif', v: 0.25 },
+                      { label: 'Full Moon', file: 'Full-Moon.gif', v: 0.5 },
+                      { label: 'Last Quarter', file: 'Last-Quarter.gif', v: 0.75 },
+                    ] as const;
+                    const fmt = (d: Date) => {
+                      const mon = d.toLocaleDateString(undefined, { month: 'short' });
+                      const day = d.toLocaleDateString(undefined, { day: '2-digit' });
+                      return `${mon}-${day}`;
+                    };
+                    const imgSrc = (file: string) => `/images/icons/moon-phases/${file}`;
+
+                    const results = items.map(item => {
+                      const date = findNextPhase(now, item.v) || now;
+                      return { ...item, date };
+                    });
+
+                    return (
+                      <>
+                        {results.map(r => (
+                          <div className="day" key={r.label}>
+                            <div className="icon">
+                              <img src={imgSrc(r.file)} alt={r.label} />
+                            </div>
+                            <div className="date">{fmt(r.date)}</div>
+                          </div>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                
               </>
             )}
           </div>
