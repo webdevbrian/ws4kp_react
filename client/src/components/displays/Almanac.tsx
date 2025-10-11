@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import HeaderBar from '../HeaderBar';
 
 type SunTimes = {
   sunrise?: string;
@@ -126,14 +127,12 @@ const Almanac: React.FC = () => {
   }, [location]);
 
   return (
-    <div className="display almanac-display">
-      <div className="header">
-        <div className="title">Almanac</div>
-      </div>
-      <div className="content">
+    <>
+      <HeaderBar titleLines={["Almanac"]} />
+      <div className="main almanac">
         {!location && <p>Please enter a location to view almanac data</p>}
         {location && (
-          <div className="main almanac">
+          <>
             {loading && <p>Loading almanac...</p>}
             {error && <p>Error: {error}</p>}
             {!loading && !error && (
@@ -187,14 +186,12 @@ const Almanac: React.FC = () => {
                     );
                   })()}
                 </div>
-
-                
               </>
             )}
-          </div>
+          </>
         )}
       </div>
-    </div>
+    </>
   );
 };
 
