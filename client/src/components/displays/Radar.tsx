@@ -110,9 +110,8 @@ const Radar: React.FC = () => {
     return () => clearInterval(t);
   }, [frameUrls]);
 
-  // Center and zoom on user location for CONUS by translating and scaling the tiles
+  // Center and zoom on user location for all regions by translating and scaling the tiles
   useEffect(() => {
-    if (region !== 'conus') return;
     const tiles = tilesRef.current;
     const view = viewRef.current;
     const base = baseGridRef.current;
@@ -121,32 +120,37 @@ const Radar: React.FC = () => {
     const apply = () => {
       const viewW = view.clientWidth || 640;
       const viewH = view.clientHeight || 367;
-      // Size the mosaic by measuring the basemap grid (not the outer tiles box)
+      // Size the mosaic by measuring the basemap element (grid or stretched image)
       const totalW = base.offsetWidth;
       const totalH = base.offsetHeight;
       if (!totalW || !totalH) return;
 
-      // Approx CONUS bounds (lon west negative) — tweakable
-      const LON_MIN = -125, LON_MAX = -66;
-      const LAT_MIN = 24, LAT_MAX = 50;
+      // Region-specific geographic bounds (lon west negative)
+      let LON_MIN = -127, LON_MAX = -65;
+      let LAT_MIN = 22, LAT_MAX = 50; // CONUS tuned for better FL coverage
+      if (region === 'alaska') {
+        LON_MIN = -170; LON_MAX = -130;
+        LAT_MIN = 52; LAT_MAX = 72;
+      } else if (region === 'hawaii') {
+        LON_MIN = -161; LON_MAX = -154;
+        LAT_MIN = 18; LAT_MAX = 23;
+      }
       const lon = location?.longitude ?? -95;
       const lat = location?.latitude ?? 37;
 
-      // Visual calibration to account for projection/crop differences between basemap and Mesonet frames
-      // Positive LON_BIAS moves view right; positive LAT_BIAS moves view up
-      const LON_BIAS = 0.8; // degrees
-      const LAT_BIAS = 0.4; // degrees
-      const lonAdj = lon + LON_BIAS;
-      const latAdj = lat + LAT_BIAS;
-
-      const nx = (lonAdj - LON_MIN) / (LON_MAX - LON_MIN);
-      const ny = 1 - (latAdj - LAT_MIN) / (LAT_MAX - LAT_MIN); // invert y
+      const nx = (lon - LON_MIN) / (LON_MAX - LON_MIN);
+      const ny = 1 - (lat - LAT_MIN) / (LAT_MAX - LAT_MIN); // invert y
       const cx = Math.max(0, Math.min(1, nx)) * totalW;
       const cy = Math.max(0, Math.min(1, ny)) * totalH;
 
-      // Compute dynamic zoom so a target geographic span fits the viewport
-      const targetLonSpan = 4; // tighter zoom
-      const targetLatSpan = 2.5;  // tighter zoom
+      // Compute dynamic zoom so a target geographic span fits the viewport (per-region)
+      let targetLonSpan = 4; // default CONUS tighter zoom
+      let targetLatSpan = 2.5;
+      if (region === 'alaska') {
+        targetLonSpan = 6; targetLatSpan = 3.5;
+      } else if (region === 'hawaii') {
+        targetLonSpan = 2; targetLatSpan = 1.5;
+      }
       const conusLonSpan = (LON_MAX - LON_MIN);
       const conusLatSpan = (LAT_MAX - LAT_MIN);
       const visibleLonAtScale1 = conusLonSpan * (viewW / totalW);
@@ -223,7 +227,7 @@ const Radar: React.FC = () => {
       window.removeEventListener('resize', apply);
       ro.disconnect();
     };
-  // Re-run when location changes or when we toggle between tiles vs frames
+  // Re-run when location, region, or frames availability change
   }, [region, location, frameUrls.length]);
 
   return (
@@ -273,12 +277,22 @@ const Radar: React.FC = () => {
           </svg>
           {region === 'hawaii' && (
             <div className="tiles" ref={tilesRef}>
-              <img src="/images/maps/radar-hawaii.png" alt="Hawaii radar" />
+              <img
+                src="/images/maps/radar-hawaii.png"
+                alt="Hawaii radar"
+                ref={baseGridRef as any}
+                style={{ display: 'block', width: '100%', height: '100%' }}
+              />
             </div>
           )}
           {region === 'alaska' && (
             <div className="tiles" ref={tilesRef}>
-              <img src="/images/maps/radar-alaska.png" alt="Alaska radar" />
+              <img
+                src="/images/maps/radar-alaska.png"
+                alt="Alaska radar"
+                ref={baseGridRef as any}
+                style={{ display: 'block', width: '100%', height: '100%' }}
+              />
             </div>
           )}
           {region === 'conus' && (
