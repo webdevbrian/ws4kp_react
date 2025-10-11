@@ -30,8 +30,9 @@ const NavigationControls: React.FC = () => {
   };
 
   const handleFullscreenClick = () => {
+    const el = document.getElementById('divTwc');
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
+      (el || document.documentElement).requestFullscreen();
       setIsFullscreen(true);
     } else {
       document.exitFullscreen();
