@@ -31,6 +31,7 @@
 			font-size: 24pt;
 			position: absolute;
 			width: 250px;
+			z-index: 10;
 
 			&.single {
 				left: 170px;
@@ -82,6 +83,7 @@
 			width: 170px;
 			text-align: right;
 			position: absolute;
+			z-index: 10;
 
 			&.date {
 				padding-top: 22px;

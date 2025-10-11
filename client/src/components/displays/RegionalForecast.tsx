@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import HeaderBar from '../HeaderBar';
 import { useApp } from '../../contexts/AppContext';
 import { useRegionalObservations } from '../../hooks/useRegionalObservations';
@@ -8,8 +8,6 @@ type Region = 'conus' | 'alaska' | 'hawaii';
 const RegionalForecast: React.FC = () => {
 	const { location } = useApp();
 	const { data: obs } = useRegionalObservations();
-	const [isDay, setIsDay] = useState(true);
-	useEffect(() => { const t = setInterval(() => setIsDay(v => !v), 6000); return () => clearInterval(t); }, []);
 
 	const region: Region = useMemo(() => {
 		if (!location) return 'conus';
@@ -22,7 +20,7 @@ const RegionalForecast: React.FC = () => {
 	}, [location]);
 
 	const titleTop = 'Regional';
-	const titleBottom = 'Forecast';
+	const titleBottom = 'Observations';
 
 	const baseMapSrc = useMemo(() => {
 		if (region === 'alaska') return '/images/maps/basemap-alaska.webp';
@@ -64,15 +62,19 @@ const RegionalForecast: React.FC = () => {
 	const baseRef = useRef<HTMLImageElement | HTMLDivElement>(null as any);
 
 	// Adjustable overlay nudge to fine-tune alignment against the basemap
-	const CITY_OFFSET_X = 25; // px right (+) / left (-)
-	const CITY_OFFSET_Y = 6;  // px down (+) / up (-)
+	const CITY_OFFSET_X = 0; // px right (+) / left (-)
+	const CITY_OFFSET_Y = 0;  // px down (+) / up (-)
 	// Adjustable overlay scale around the map center (1 = no change, >1 = overlay appears more zoomed-in)
-	const OVERLAY_SCALE = 1.1;
+	const OVERLAY_SCALE = 1.2;
 
 	// Adjustable MAP controls (apply to the basemap itself)
-	const MAP_SCALE = 1; // multiply the computed regional scale by this
-	const MAP_OFFSET_X = 0; // px shift of the basemap after centering
-	const MAP_OFFSET_Y = 0; // px shift of the basemap after centering
+	const MAP_SCALE = 1.3; // multiply the computed regional scale by this
+	const MAP_OFFSET_X = 50; // px shift of the basemap after centering
+	const MAP_OFFSET_Y = -10; // px shift of the basemap after centering
+
+	// Map-only offset (moves only the basemap image, not the overlay). Units are visual px.
+	const MAP_ONLY_OFFSET_X = -130;
+	const MAP_ONLY_OFFSET_Y = 10;
 
 	// Adjustable UI sizes for city label, temperature text, and icon
 	const CITY_NAME_SIZE = 4; // px
@@ -108,11 +110,18 @@ const RegionalForecast: React.FC = () => {
 		const scale = Math.min(scaleX, scaleY) * MAP_SCALE;
 
 		let tx = Math.round(viewW / 2 - cx * scale), ty = Math.round(viewH / 2 - cy * scale);
-		// Apply manual map offsets
-		tx += MAP_OFFSET_X;
-		ty += MAP_OFFSET_Y;
 		const minTx = Math.min(0, viewW - totalW * scale), minTy = Math.min(0, viewH - totalH * scale);
 		const maxTx = 0, maxTy = 0; tx = Math.max(minTx, Math.min(maxTx, tx)); ty = Math.max(minTy, Math.min(maxTy, ty));
+		// Apply manual map-only offsets AFTER clamping so they always take effect
+		tx += MAP_OFFSET_X;
+		ty += MAP_OFFSET_Y;
+
+		// Apply separate per-image offset so only the basemap moves relative to overlay
+		if (base && base.style) {
+			const imgShiftX = (MAP_ONLY_OFFSET_X) / scale; // account for tiles scale
+			const imgShiftY = (MAP_ONLY_OFFSET_Y) / scale;
+			(base as HTMLElement).style.transform = `translate(${imgShiftX}px, ${imgShiftY}px)`;
+		}
 
 		tiles.style.transformOrigin = 'top left'; tiles.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
 	};
@@ -194,7 +203,7 @@ const RegionalForecast: React.FC = () => {
 									const icon = getRegionalIcon(s.conditions);
 									return (
 										<div key={s.id} style={{ position: 'absolute', transform: `translate(${Math.round(p.x)}px, ${Math.round(p.y)}px)` }}>
-											<div style={{ transform: `translate(-50%, -100%) translate(${CITY_OFFSET_X}px, ${CITY_OFFSET_Y}px)` }}>
+											<div style={{ transform: `translate(${CITY_OFFSET_X}px, ${CITY_OFFSET_Y}px)` }}>
 												<div style={{ color: 'white', fontFamily: 'Star4000 Small', fontSize: CITY_NAME_SIZE, lineHeight: 1, textShadow: '1px 1px 0 #000', marginBottom: CITY_LABEL_MARGIN }}>{formatCity(s.name)}</div>
 												<div style={{ display: 'flex', alignItems: 'center', gap: ROW_GAP, marginTop: 0 }}>
 													{typeof s.tempF === 'number' && (
