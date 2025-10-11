@@ -94,6 +94,11 @@ const SpcOutlook: React.FC = () => {
   const [spcTestRaw, setSpcTestRaw] = useState<string | null>(null);
   const parseAndApplySpcTest = () => {
     let raw: string | null = null;
+    // Determine if the URL explicitly contains the spcTest parameter
+    const hasInSearch = /(^|[?&])spcTest=/i.test(window.location.search);
+    const hasInHash = /spcTest=/i.test(window.location.hash);
+    const hasInHref = /spcTest=/i.test(window.location.href);
+    const urlHasParam = hasInSearch || hasInHash || hasInHref;
     // Prefer querystring
     const searchParams = new URLSearchParams(window.location.search);
     raw = searchParams.get('spcTest');
@@ -107,7 +112,15 @@ const SpcOutlook: React.FC = () => {
       const m2 = window.location.href.match(/spcTest=([^&#]+)/i);
       if (m2) raw = decodeURIComponent(m2[1]);
     }
-    // Persisted value across route changes / refreshes
+    // If URL does not have param at all, do NOT use persisted value; ensure override is off
+    if (!urlHasParam) {
+      sessionStorage.removeItem('spcTest');
+      localStorage.removeItem('spcTest');
+      overrideActive.current = false;
+      setSpcTestRaw(null);
+      return false;
+    }
+    // Persisted value across route changes / refreshes (only when URL mentions spcTest)
     if (!raw) {
       raw = sessionStorage.getItem('spcTest') || localStorage.getItem('spcTest');
     }
