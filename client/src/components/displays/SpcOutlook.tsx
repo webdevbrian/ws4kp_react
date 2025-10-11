@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import HeaderBar from '../HeaderBar';
 
@@ -9,11 +9,13 @@ const SpcOutlook: React.FC = () => {
 
   // Map a point to categorical severity for day 1-3 using IEM SPC GeoJSON (best-effort)
   const [daySeverity, setDaySeverity] = useState<Array<number | null>>([null, null, null]);
+  const overrideActive = useRef(false);
 
   useEffect(() => {
+    if (overrideActive.current) return;
     if (!location) return;
     const { latitude: lat, longitude: lon } = location;
-    const cats = ['TSTM','MRGL','SLGT','ENH','MDT','HIGH'];
+    const cats = ['TSTM','MRGL','SLGT','ENH','MDT','HIGH','HIGH+'];
     const normalizeCat = (raw: string): string => {
       const s = (raw || '').toString().trim().toUpperCase();
       if (!s) return '';
@@ -88,6 +90,87 @@ const SpcOutlook: React.FC = () => {
     return [d1, d2, d3];
   }, []);
 
+  // Test override: add ?spcTest=tstm,slgt,high or ?spcTest=0,2,5 to preview bar lengths
+  const [spcTestRaw, setSpcTestRaw] = useState<string | null>(null);
+  const parseAndApplySpcTest = () => {
+    let raw: string | null = null;
+    // Prefer querystring
+    const searchParams = new URLSearchParams(window.location.search);
+    raw = searchParams.get('spcTest');
+    // Hash query support
+    if (!raw && window.location.hash) {
+      const m = window.location.hash.match(/spcTest=([^&#]+)/i);
+      if (m) raw = decodeURIComponent(m[1]);
+    }
+    // Fallback: scan full href
+    if (!raw) {
+      const m2 = window.location.href.match(/spcTest=([^&#]+)/i);
+      if (m2) raw = decodeURIComponent(m2[1]);
+    }
+    // Persisted value across route changes / refreshes
+    if (!raw) {
+      raw = sessionStorage.getItem('spcTest') || localStorage.getItem('spcTest');
+    }
+    if (!raw) return false;
+    if (raw.toLowerCase() === 'clear') {
+      sessionStorage.removeItem('spcTest');
+      localStorage.removeItem('spcTest');
+      overrideActive.current = false;
+      setSpcTestRaw(null);
+      setDaySeverity([null, null, null]);
+      return false;
+    }
+    const cats = ['TSTM','MRGL','SLGT','ENH','MDT','HIGH'];
+    const parseOne = (tok: string): number | null => {
+      const t = tok.trim();
+      if (!t) return null;
+      // numeric
+      const num = Number(t);
+      if (!Number.isNaN(num) && num >= 0 && num <= 6) return num;
+      // label
+      const lbl = t.toUpperCase();
+      const norm = lbl.startsWith('T') ? 'TSTM' : lbl;
+      const idx = cats.indexOf(norm);
+      return idx >= 0 ? idx : null;
+    };
+    const tokens = raw.replace(/^#\/?/, '').split(/[\,\s]+/);
+    let parts = tokens.map(parseOne).filter((x): x is number => x !== null);
+    // Fallback: extract any digits 0-6 in order if CSV parsing failed
+    if (parts.length === 0) {
+      const m = raw.match(/[0-6]/g);
+      if (m && m.length) {
+        parts = m.map(d => Number(d));
+      }
+    }
+    if (parts.length === 1) parts = [parts[0], parts[0], parts[0]]; // replicate single across 3 days
+    if (parts.length === 2) parts = [parts[0], parts[1], parts[1]];
+    // Tests start at 1; treat 0 (TSTM) as "no bar" for test mode
+    const partsForOver: Array<number | null> = parts.map(v => (v === 0 ? null : v));
+    const over: Array<number | null> = [partsForOver[0] ?? null, partsForOver[1] ?? null, partsForOver[2] ?? null];
+    overrideActive.current = true;
+    setSpcTestRaw(raw);
+    setDaySeverity(over);
+    // Save for subsequent navigations
+    try { sessionStorage.setItem('spcTest', raw); } catch {}
+    try { localStorage.setItem('spcTest', raw); } catch {}
+    return true;
+  };
+
+  useLayoutEffect(() => {
+    // Initial parse (immediately and after a tick for router updates)
+    let applied = parseAndApplySpcTest();
+    const t = window.setTimeout(() => { if (!applied) parseAndApplySpcTest(); }, 0);
+    const onHash = () => parseAndApplySpcTest();
+    const onPop = () => parseAndApplySpcTest();
+    window.addEventListener('hashchange', onHash);
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('hashchange', onHash);
+      window.removeEventListener('popstate', onPop);
+    };
+  }, []);
+
   return (
     <>
       <HeaderBar titleLines={["Storm Prediction", "Center Outlook"]} />
@@ -105,9 +188,12 @@ const SpcOutlook: React.FC = () => {
             {days.map((name, idx) => {
               const sev = daySeverity[idx];
               const widthFor = (i: number) => {
-                // Fixed-width mapping to better match legacy look
-                const map = [40, 60, 90, 110, 130, 150]; // TSTM..HIGH
-                return map[Math.max(0, Math.min(5, i))];
+                // Explicit mapping by severity index
+                // 0: TSTM (live small; test hides); 1: MRGL baseline
+                // 2: interpolated between 1 and 3; 3..6 as specified
+                const map = [40, 60, 146, 208, 271, 332, 388];
+                const idx = Math.max(0, Math.min(map.length - 1, i));
+                return map[idx];
               };
               const width = typeof sev === 'number' ? widthFor(sev) : undefined;
               return (
@@ -120,6 +206,11 @@ const SpcOutlook: React.FC = () => {
           </div>
 
           {/* No explicit error text; quiet failure keeps UI clean */}
+          {overrideActive.current && (
+            <div style={{ position: 'absolute', right: 8, bottom: 6, fontSize: 10, opacity: 0.6 }}>
+              spcTest: {daySeverity.map(v => (v ?? '-')).join(',')} {spcTestRaw ? `(raw: ${spcTestRaw})` : ''}
+            </div>
+          )}
         </div>
       </div>
     </>
