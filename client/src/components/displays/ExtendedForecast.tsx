@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useForecastData } from '../../hooks/useForecastData';
 import { useApp } from '../../contexts/AppContext';
+import HeaderBar from '../HeaderBar';
 
 const ExtendedForecast: React.FC = () => {
   const { location } = useApp();
@@ -72,9 +73,7 @@ const ExtendedForecast: React.FC = () => {
 
   return (
     <>
-      <div className="header">
-        <div className="title">Extended Forecast</div>
-      </div>
+      <HeaderBar titleLines={["Extended", "Forecast"]} />
       <div className="main extended-forecast">
         {!location && <div className="day-container"><div className="day"/></div>}
         {loading && <div className="day-container"><div className="day">Loading...</div></div>}
