@@ -102,24 +102,36 @@
 }
 
 .weather-display .main.radar {
-	overflow: hidden;
-	height: 367px;
+  overflow: hidden;
+  height: 367px;
 
-	.container {
+  .container {
 
-		.tiles {
-			position: absolute;
-			width: 1400px;
+    .tiles {
+      position: absolute;
+      /* Let the grid content determine natural width/height */
+      width: auto;
 
-			img {
-				vertical-align: middle;
-			}
-		}
+      img {
+        vertical-align: middle;
+        display: block;
+      }
+    }
 
-		.scroll-area {
-			position: relative;
-		}
-	}
+    .scroll-area {
+      position: relative;
+    }
+  }
+}
+
+/* Ensure overlay sits above basemap and does not intercept mouse/touch */
+.weather-display .main.radar .overlay-grid {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.weather-display .main.radar .basemap-grid {
+  z-index: 1;
 }
 
 .wide.radar #container {

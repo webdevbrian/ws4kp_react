@@ -127,7 +127,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ version }) => {
           >
             <Hazards />
           </div>
-          <CurrentWeatherScroll />
+          {currentDisplay !== 'radar' && <CurrentWeatherScroll />}
         </div>
       </div>
     </div>
