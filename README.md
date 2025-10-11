@@ -56,25 +56,7 @@ This project is tightly coupled to [NOAA's Weather API](https://www.weather.gov/
 If you would like to display weather information for international locations (outside of the USA), please checkout a fork of this project created by [@mwood77](https://github.com/mwood77):
 - [`ws4kp-international`](https://github.com/mwood77/ws4kp-international)
 
-## Deployment Modes
-
-WeatherStar 4000+ supports two deployment modes:
-
-### Server Deployment (Recommended)
-
-* Includes Node.js server with caching proxy for better performance (especially when running on a local server for multiple clients)
-* Server-side request deduplication and caching
-* Weather API observability and logging
-* Used by: `npm start`, `DIST=1 npm start`, and `Dockerfile.server`
-
-### Static Deployment
-
-* Pure client-side deployment using nginx to serve static files
-* All API requests are made directly from each browser to the weather services
-* Browser-based caching
-* Used by: static file hosting and default `Dockerfile`
-
-## Other methods to run Ws4kp
+## Development and Build
 
 ### Development workflow
 
@@ -100,52 +82,9 @@ You can serve the built assets with any static web server. If you need the cachi
 
 ### Key Differences
 
-**Development Mode (`npm start`):**
-- Uses individual JavaScript module files served directly
-- Easier debugging with source maps and readable code
-- Slower initial load (many HTTP requests for individual files)
-- Live file watching and faster development iteration
-
-**Production Mode (`DIST=1 npm start`):**
-- Uses minified and concatenated JavaScript bundles
-- Faster initial load (fewer HTTP requests, smaller file sizes)
-- Optimized for performance with multiple clients
-- Requires `npm run build` to generate optimized files
-
-### Docker Deployments
-
-To run via Docker using a "static deployment" where everything happens in the browser (no server component, like STATIC=1):
-
-```bash
-docker run -p 8080:8080 ghcr.io/netbymatt/ws4kp
-```
-
-To run via Docker using a "server deployment" with a caching proxy server for multi-client performance and enhanced observability (like `npm run build; DIST=1 npm start`):
-
-```bash
-docker build -f Dockerfile.server -t ws4kp-server .
-docker run -p 8080:8080 ws4kp-server
-```
-
-To run via Docker Compose (shown here in static deployment mode):
-
-```yaml
----
-services:
-  ws4kp:
-    image: ghcr.io/netbymatt/ws4kp
-    container_name: ws4kp
-    environment:
-      # Each argument in the permalink URL can become an environment variable on the Docker host by adding WSQS_
-      # Following the "Sharing a Permalink" example below, here are a few environment variables defined. Visit that section for a
-      # more complete list of configuration options.
-      - WSQS_latLonQuery="Orlando International Airport Orlando FL USA"
-      - WSQS_hazards_checkbox=false
-      - WSQS_current_weather_checkbox=true
-    ports:
-      - 8080:8080 # change the first 8080 to meet your local network needs
-    restart: unless-stopped
-```
+- This refactor uses Vite and React for development and build.
+- Development runs two processes (frontend on 3000, backend on 8080).
+- Production uses `npm run build` to output `/dist` for static hosting; pair with the Express proxy if you want caching and upstream header normalization.
 
 ### Serving the app
 
@@ -248,36 +187,17 @@ If you're looking for the original music that played during forecasts [TWCClassi
 
 WeatherStar 4000+ supports background music during forecast playback. The music behavior depends on how you deploy the application:
 
-#### Express server modes (`npm start`, `DIST=1 npm start`, or `Dockerfile.server`)
+#### Express server mode (proxy server on 8080)
 
 When running with Node.js, the server generates a `playlist.json` file by scanning the `./server/music` directory for `.mp3` files. If no files are found in `./server/music`, it falls back to scanning `./server/music/default/`. The playlist is served dynamically at the `/playlist.json` endpoint.
 
 **Adding your own music:** Place `.mp3` files in `./server/music/`
 
-**Docker server example:**
-```bash
-docker build -f Dockerfile.server -t ws4kp-server .
-docker run -p 8080:8080 -v /path/to/local/music:/app/server/music ws4kp-server
-```
-
-#### Static hosting modes (default `Dockerfile`, nginx, Apache, etc.)
-
-When hosting static files, there are two scenarios:
-
-**Static Docker deployment:** The build process creates a `playlist.json` file with default tracks, but the Docker image _intentionally_ removes it to force browser-based directory scanning. The browser attempts to fetch `playlist.json`, receives a 404 response with the `X-Weatherstar` header, which causes it to  fallback to scanning the `music/` directory.
-
-**Manual static hosting:** If you build and upload the files yourself (`npm run build`), `playlist.json` will contain the default tracks unless you customize `./server/music/` before building.
-
 For directory scanning to work properly:
 * Your web server must generate directory listings for the `music/` path
 * Your web server must set the `X-Weatherstar: true` header (the provided nginx configuration does this)
 
-**Adding your own music:** Place `.mp3` files in `music/` (or bind mount to `/usr/share/nginx/html/music` for Docker)
-
-**Docker static example:**
-```bash
-docker run -p 8080:8080 -v /path/to/local/music:/usr/share/nginx/html/music ghcr.io/netbymatt/ws4kp
-```
+**Adding your own music:** Place `.mp3` files in `music/` under your static hosting root.
 
 Subdirectories will not be scanned. When WeatherStar loads in the browser, it randomizes the track order and reshuffles on each loop through the playlist.
 
@@ -306,10 +226,10 @@ Thanks to the WeatherStar+ community for providing these discussions to further 
 
 A hook is provided as `server/scripts/custom.js` to allow customizations to your own fork of this project, without accidentally pushing your customizations back upstream to the git repository. A sample file is provided at `server/scripts/custom.sample.js` and should be renamed to `custom.js` activate it.
 
-When using Docker:
+When self-hosting, place your `custom.js` file at:
 
-* **Static deployment**: Mount your `custom.js` file to `/usr/share/nginx/html/scripts/custom.js`
-* **Server deployment**: Mount your `custom.js` file to `/app/server/scripts/custom.js`
+* `server/scripts/custom.js` (for the Express server)
+* `scripts/custom.js` in your static hosting root (if supported by your setup)
 
 ### RSS feeds and custom scroll
 If you would like your Weatherstar to have custom scrolling text in the bottom blue bar, or show headlines from an rss feed turn on the setting for `Enable RSS Feed/Text` and then enter a URL or text in the resulting text box. Then press set.
