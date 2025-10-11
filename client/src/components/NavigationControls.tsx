@@ -9,6 +9,7 @@ const NavigationControls: React.FC = () => {
     setIsFullscreen,
     scanlines,
     setScanlines,
+    mediaAvailable,
     mediaEnabled,
     setMediaEnabled
   } = useApp();
@@ -122,7 +123,7 @@ const NavigationControls: React.FC = () => {
         />
       </div>
       <div id="divTwcBottomRight">
-        <div id="ToggleMedia" onClick={handleMediaToggle}>
+        <div id="ToggleMedia" className={mediaAvailable ? 'available' : ''} onClick={handleMediaToggle}>
           <img
             className={`navButton ${mediaEnabled ? 'off' : 'on'}`}
             src="/images/nav/ic_volume_off_white_24dp_2x.png"

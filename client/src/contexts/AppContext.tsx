@@ -21,6 +21,8 @@ interface AppContextType {
   setIsFullscreen: (value: boolean) => void;
   scanlines: boolean;
   setScanlines: (value: boolean) => void;
+  mediaAvailable: boolean;
+  setMediaAvailable: (value: boolean) => void;
   mediaEnabled: boolean;
   setMediaEnabled: (value: boolean) => void;
   musicTrack: string;
@@ -45,6 +47,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [location, setLocation] = useState<Location | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [scanlines, setScanlines] = useState(false);
+  const [mediaAvailable, setMediaAvailable] = useState(false);
   const [mediaEnabled, setMediaEnabled] = useState(false);
   const [musicTrack, setMusicTrack] = useState('Not playing');
 
@@ -58,6 +61,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setIsFullscreen,
     scanlines,
     setScanlines,
+    mediaAvailable,
+    setMediaAvailable,
     mediaEnabled,
     setMediaEnabled,
     musicTrack,

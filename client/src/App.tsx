@@ -3,6 +3,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import WeatherDisplay from './components/WeatherDisplay';
 import LocationInput from './components/LocationInput';
 import NavigationControls from './components/NavigationControls';
+import MusicPlayer from './components/MusicPlayer';
 import Settings from './components/Settings';
 import { AppProvider } from './contexts/AppContext';
 import { NavigationProvider } from './contexts/NavigationContext';
@@ -77,6 +78,7 @@ const App: React.FC = () => {
             </div>
 
             <WeatherDisplay version={version} />
+            <MusicPlayer />
             <NavigationControls />
             <Settings version={version} />
           </div>

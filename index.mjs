@@ -175,6 +175,7 @@ app.get('/', (req, res) => {
 // Serve static files if needed
 app.use('/fonts', express.static('./server/fonts', staticOptions));
 app.use('/images', express.static('./server/images', staticOptions));
+app.use('/music', express.static('./server/music', staticOptions));
 
 const server = app.listen(port, () => {
 	console.log(`Server listening on port ${port}`);
