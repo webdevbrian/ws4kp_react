@@ -35,11 +35,22 @@ body {
 #divQuery {
 	max-width: 640px;
 	padding: 8px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: nowrap;
+
+	.autocomplete-container {
+		flex: 1 1 auto;
+		min-width: 0; // allows input to shrink without wrapping
+	}
 
 	.buttons {
-		display: inline-block;
-		width: 150px;
-		text-align: right;
+		display: flex;
+		flex: 0 0 auto;
+		gap: 6px;
+		align-items: center;
+		justify-content: flex-end;
 
 		#imgGetGps {
 			height: 13px;
@@ -54,7 +65,6 @@ body {
 				background-color: #000000;
 				color: white;
 			}
-
 		}
 
 		#btnGetGps {
@@ -95,11 +105,9 @@ body {
 	}
 
 	#txtLocation {
-		width: calc(100% - 170px);
-		max-width: 490px;
+		width: 100%;
 		font-size: 16pt;
 		min-width: 200px;
-		display: inline-block;
 
 		// Ensure consistent styling across light and dark modes
 		background-color: white;
@@ -112,8 +120,6 @@ body {
 			border: 2px inset #808080;
 		}
 	}
-
-
 }
 
 .autocomplete-suggestions {
