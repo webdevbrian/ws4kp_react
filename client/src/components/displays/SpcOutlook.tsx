@@ -27,7 +27,12 @@ const SpcOutlook: React.FC = () => {
       if (s.startsWith('HIGH')) return 'HIGH';
       return s;
     };
-    const severityIndex = (cat: string) => cats.indexOf(normalizeCat(cat));
+    // Map categories to indices 1..6 (TSTM=1, MRGL=2, ... HIGH=6). 0 means no bar.
+    const severityIndex = (cat: string) => {
+      const idx = cats.indexOf(normalizeCat(cat));
+      if (idx < 0) return 0;
+      return Math.min(6, idx + 1);
+    };
     const pointInPoly = (point: [number, number], polygon: [number, number][]) => {
       // Ray casting
       let inside = false;
@@ -70,7 +75,8 @@ const SpcOutlook: React.FC = () => {
           const idx = visitFeature(f);
           if (idx > best) best = idx;
         }
-        return best >= 0 ? best : null;
+        // best is 0..6; treat 0 as no bar
+        return best > 0 ? best : null;
       } catch {
         return null;
       }
@@ -204,15 +210,15 @@ const SpcOutlook: React.FC = () => {
                 // Explicit mapping by severity index
                 // 0: TSTM (live small; test hides); 1: MRGL baseline
                 // 2: interpolated between 1 and 3; 3..6 as specified
-                const map = [40, 60, 146, 208, 271, 332, 388];
+                const map = [0, 60, 146, 208, 271, 332, 388];
                 const idx = Math.max(0, Math.min(map.length - 1, i));
                 return map[idx];
               };
-              const width = typeof sev === 'number' ? widthFor(sev) : undefined;
+              const width = typeof sev === 'number' && sev > 0 ? widthFor(sev) : undefined;
               return (
                 <div className="day" key={idx}>
                   <div className="day-name">{name}</div>
-                  {typeof sev === 'number' && <div className="risk-bar" style={{ width }} />}
+                  {typeof sev === 'number' && sev > 0 && <div className="risk-bar" style={{ width }} />}
                 </div>
               );
             })}
