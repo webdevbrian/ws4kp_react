@@ -15,7 +15,7 @@ const SpcOutlook: React.FC = () => {
     if (overrideActive.current) return;
     if (!location) return;
     const { latitude: lat, longitude: lon } = location;
-    const cats = ['TSTM','MRGL','SLGT','ENH','MDT','HIGH','HIGH+'];
+    const cats = ['TSTM', 'MRGL', 'SLGT', 'ENH', 'MDT', 'HIGH', 'HIGH+'];
     const normalizeCat = (raw: string): string => {
       const s = (raw || '').toString().trim().toUpperCase();
       if (!s) return '';
@@ -27,12 +27,7 @@ const SpcOutlook: React.FC = () => {
       if (s.startsWith('HIGH')) return 'HIGH';
       return s;
     };
-    // Map categories to indices 1..6 (TSTM=1, MRGL=2, ... HIGH=6). 0 means no bar.
-    const severityIndex = (cat: string) => {
-      const idx = cats.indexOf(normalizeCat(cat));
-      if (idx < 0) return 0;
-      return Math.min(6, idx + 1);
-    };
+    const severityIndex = (cat: string) => cats.indexOf(normalizeCat(cat));
     const pointInPoly = (point: [number, number], polygon: [number, number][]) => {
       // Ray casting
       let inside = false;
@@ -56,7 +51,7 @@ const SpcOutlook: React.FC = () => {
         const ring = geom.coordinates?.[0] as [number, number][];
         if (ring && pointInPoly(pt, ring)) return idx;
       } else if (geom?.type === 'MultiPolygon') {
-        const polys = geom.coordinates as [ [ [number, number][] ] ];
+        const polys = geom.coordinates as [[[number, number][]]];
         for (const poly of polys) {
           const ring = poly[0];
           if (ring && pointInPoly(pt, ring)) return idx;
@@ -75,8 +70,7 @@ const SpcOutlook: React.FC = () => {
           const idx = visitFeature(f);
           if (idx > best) best = idx;
         }
-        // best is 0..6; treat 0 as no bar
-        return best > 0 ? best : null;
+        return best >= 0 ? best : null;
       } catch {
         return null;
       }
@@ -88,11 +82,11 @@ const SpcOutlook: React.FC = () => {
   }, [location]);
 
   const days = useMemo(() => {
-    const names = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const now = new Date();
     const d1 = names[now.getDay()];
-    const d2 = names[(now.getDay()+1)%7];
-    const d3 = names[(now.getDay()+2)%7];
+    const d2 = names[(now.getDay() + 1) % 7];
+    const d3 = names[(now.getDay() + 2) % 7];
     return [d1, d2, d3];
   }, []);
 
@@ -100,11 +94,6 @@ const SpcOutlook: React.FC = () => {
   const [spcTestRaw, setSpcTestRaw] = useState<string | null>(null);
   const parseAndApplySpcTest = () => {
     let raw: string | null = null;
-    // Determine if the URL explicitly contains the spcTest parameter
-    const hasInSearch = /(^|[?&])spcTest=/i.test(window.location.search);
-    const hasInHash = /spcTest=/i.test(window.location.hash);
-    const hasInHref = /spcTest=/i.test(window.location.href);
-    const urlHasParam = hasInSearch || hasInHash || hasInHref;
     // Prefer querystring
     const searchParams = new URLSearchParams(window.location.search);
     raw = searchParams.get('spcTest');
@@ -118,15 +107,7 @@ const SpcOutlook: React.FC = () => {
       const m2 = window.location.href.match(/spcTest=([^&#]+)/i);
       if (m2) raw = decodeURIComponent(m2[1]);
     }
-    // If URL does not have param at all, do NOT use persisted value; ensure override is off
-    if (!urlHasParam) {
-      sessionStorage.removeItem('spcTest');
-      localStorage.removeItem('spcTest');
-      overrideActive.current = false;
-      setSpcTestRaw(null);
-      return false;
-    }
-    // Persisted value across route changes / refreshes (only when URL mentions spcTest)
+    // Persisted value across route changes / refreshes
     if (!raw) {
       raw = sessionStorage.getItem('spcTest') || localStorage.getItem('spcTest');
     }
@@ -139,7 +120,7 @@ const SpcOutlook: React.FC = () => {
       setDaySeverity([null, null, null]);
       return false;
     }
-    const cats = ['TSTM','MRGL','SLGT','ENH','MDT','HIGH'];
+    const cats = ['TSTM', 'MRGL', 'SLGT', 'ENH', 'MDT', 'HIGH'];
     const parseOne = (tok: string): number | null => {
       const t = tok.trim();
       if (!t) return null;
@@ -170,8 +151,8 @@ const SpcOutlook: React.FC = () => {
     setSpcTestRaw(raw);
     setDaySeverity(over);
     // Save for subsequent navigations
-    try { sessionStorage.setItem('spcTest', raw); } catch {}
-    try { localStorage.setItem('spcTest', raw); } catch {}
+    try { sessionStorage.setItem('spcTest', raw); } catch { }
+    try { localStorage.setItem('spcTest', raw); } catch { }
     return true;
   };
 
@@ -197,7 +178,7 @@ const SpcOutlook: React.FC = () => {
         <div className="container">
           {/* Left stacked risk labels */}
           <div className="risk-levels">
-            {['HIGH','MODERATE','ENHANCED','SLIGHT','MARGINAL','T\'STORM'].map((r, i) => (
+            {['HIGH', 'MODERATE', 'ENHANCED', 'SLIGHT', 'MARGINAL', 'T\'STORM'].map((r, i) => (
               <div key={i} className="risk-level">{r}</div>
             ))}
           </div>
@@ -210,15 +191,15 @@ const SpcOutlook: React.FC = () => {
                 // Explicit mapping by severity index
                 // 0: TSTM (live small; test hides); 1: MRGL baseline
                 // 2: interpolated between 1 and 3; 3..6 as specified
-                const map = [0, 60, 146, 208, 271, 332, 388];
+                const map = [40, 60, 146, 208, 271, 332, 388];
                 const idx = Math.max(0, Math.min(map.length - 1, i));
                 return map[idx];
               };
-              const width = typeof sev === 'number' && sev > 0 ? widthFor(sev) : undefined;
+              const width = typeof sev === 'number' ? widthFor(sev) : undefined;
               return (
                 <div className="day" key={idx}>
                   <div className="day-name">{name}</div>
-                  {typeof sev === 'number' && sev > 0 && <div className="risk-bar" style={{ width }} />}
+                  {typeof sev === 'number' && <div className="risk-bar" style={{ width }} />}
                 </div>
               );
             })}
