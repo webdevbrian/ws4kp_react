@@ -132,8 +132,15 @@ const Radar: React.FC = () => {
       const lon = location?.longitude ?? -95;
       const lat = location?.latitude ?? 37;
 
-      const nx = (lon - LON_MIN) / (LON_MAX - LON_MIN);
-      const ny = 1 - (lat - LAT_MIN) / (LAT_MAX - LAT_MIN); // invert y
+      // Visual calibration to account for projection/crop differences between basemap and Mesonet frames
+      // Positive LON_BIAS moves view right; positive LAT_BIAS moves view up
+      const LON_BIAS = 0.8; // degrees
+      const LAT_BIAS = 0.4; // degrees
+      const lonAdj = lon + LON_BIAS;
+      const latAdj = lat + LAT_BIAS;
+
+      const nx = (lonAdj - LON_MIN) / (LON_MAX - LON_MIN);
+      const ny = 1 - (latAdj - LAT_MIN) / (LAT_MAX - LAT_MIN); // invert y
       const cx = Math.max(0, Math.min(1, nx)) * totalW;
       const cy = Math.max(0, Math.min(1, ny)) * totalH;
 
