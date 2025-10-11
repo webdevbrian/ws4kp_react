@@ -22,10 +22,17 @@ export const radarProxy = async (req, res) => {
 
 // SPC (Storm Prediction Center) outlook proxy
 export const outlookProxy = async (req, res) => {
-	await cache.handleRequest(req, res, 'https://www.spc.noaa.gov', {
-		serviceName: 'SPC Outlook',
-		skipParams: ['u'],
-	});
+    await cache.handleRequest(req, res, 'https://www.spc.noaa.gov', {
+        serviceName: 'SPC Outlook',
+        skipParams: ['u'],
+        encoding: 'binary',
+        headers: {
+            'accept-encoding': 'identity',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+            'referer': 'https://www.spc.noaa.gov/',
+            'accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+        }
+    });
 };
 
 // Iowa State Mesonet proxy with configurable host

@@ -51,11 +51,26 @@ class HttpCache {
 
 	// Helper method to set filtered headers and our cache policy
 	static setFilteredHeaders(res, headers) {
-		// Strip cache-related headers and pass through others
+		// Strip hop-by-hop and cache-related headers; let Express set correct content-length
+		const disallowed = new Set([
+			'cache-control',
+			'expires',
+			'etag',
+			'last-modified',
+			'transfer-encoding',
+			'content-length',
+			'connection',
+			'keep-alive',
+			'proxy-authenticate',
+			'proxy-authorization',
+			'te',
+			'trailer',
+			'upgrade',
+		]);
+
 		Object.entries(headers || {}).forEach(([key, value]) => {
 			const lowerKey = key.toLowerCase();
-			// Skip cache-related headers that should be controlled by our proxy
-			if (!['cache-control', 'expires', 'etag', 'last-modified'].includes(lowerKey)) {
+			if (!disallowed.has(lowerKey)) {
 				res.header(lowerKey, value);
 			}
 		});

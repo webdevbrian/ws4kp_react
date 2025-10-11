@@ -16,14 +16,24 @@ const stationInfo = JSON.parse(await readFile('./datagenerators/output/stations.
 const app = express();
 const port = process.env.WS4KP_PORT ?? 8080;
 
-// Set X-Weatherstar header globally for playlist fallback detection
+// CORS middleware - allow requests from the Vite dev server
 app.use((req, res, next) => {
+	res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+	res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 	res.setHeader('X-Weatherstar', 'true');
+
+	// Handle preflight requests
+	if (req.method === 'OPTIONS') {
+		res.sendStatus(204);
+		return;
+	}
+
 	next();
 });
 
-// template engine
-app.set('view engine', 'ejs');
+// template engine - no longer needed with React
+// app.set('view engine', 'ejs');
 
 // version
 const { version } = JSON.parse(fs.readFileSync('package.json'));
@@ -51,27 +61,14 @@ const hasQsVars = Object.entries(qsVars).length > 0;
 // turn the environment query string into search params
 const defaultSearchParams = (new URLSearchParams(qsVars)).toString();
 
-const renderIndex = (req, res, production = false) => {
-	res.render('index', {
-		production,
-		serverAvailable: !process.env?.STATIC, // Disable caching proxy server in static mode
+// React app handles rendering - API server only
+const apiInfo = (req, res) => {
+	res.json({
 		version,
+		serverAvailable: !process.env?.STATIC,
 		OVERRIDES,
 		query: req.query,
 	});
-};
-
-const index = (req, res) => {
-	// test for no query string in request and if environment query string values were provided
-	if (hasQsVars && Object.keys(req.query).length === 0) {
-		// redirect the user to the query-string appended url
-		const url = new URL(`${req.protocol}://${req.host}${req.url}`);
-		url.search = defaultSearchParams;
-		res.redirect(307, url.toString());
-		return;
-	}
-	// return the EJS template page in development mode (serve files from server directory directly)
-	renderIndex(req, res, false);
 };
 
 const geoip = (req, res) => {
@@ -152,24 +149,32 @@ Object.entries(dataEndpoints).forEach(([name, data]) => {
 	});
 });
 
-if (process.env?.DIST === '1') {
-	// Production ("distribution") mode uses pre-baked files in the dist directory
-	// 'npm run build' and then 'DIST=1 npm start'
-	app.use('/scripts', express.static('./server/scripts', staticOptions));
-	app.use('/geoip', geoip);
+// API endpoints only - React app handles the frontend
+app.use('/geoip', geoip);
+app.get('/api-info', apiInfo);
 
-	// render the EJS template in production mode (serve compressed files from dist directory)
-	app.get('/', (req, res) => { renderIndex(req, res, true); });
+// Root route - inform users to use the React dev server
+app.get('/', (req, res) => {
+	res.json({
+		message: 'WeatherStar 4000+ API Server',
+		version,
+		note: 'This is the API backend. To access the application, run "npm run dev" and visit http://localhost:3000',
+		endpoints: {
+			api: '/api/*',
+			data: '/data/[travelcities|regionalcities|stations].json',
+			geoip: '/geoip',
+			radar: '/radar/*',
+			spc: '/spc/*',
+			mesonet: '/mesonet/*',
+			forecast: '/forecast/*',
+			playlist: '/playlist.json'
+		}
+	});
+});
 
-	app.use('/', express.static('./dist', staticOptions));
-} else {
-	// Development mode serves files from the server directory: 'npm start'
-	app.get('/index.html', index);
-	app.use('/geoip', geoip);
-	app.use('/resources', express.static('./server/scripts/modules'));
-	app.get('/', index);
-	app.get('*name', express.static('./server', staticOptions));
-}
+// Serve static files if needed
+app.use('/fonts', express.static('./server/fonts', staticOptions));
+app.use('/images', express.static('./server/images', staticOptions));
 
 const server = app.listen(port, () => {
 	console.log(`Server listening on port ${port}`);

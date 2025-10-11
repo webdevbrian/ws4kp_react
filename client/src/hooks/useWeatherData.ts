@@ -1,0 +1,166 @@
+import { useState, useEffect } from 'react';
+import { useApp } from '../contexts/AppContext';
+
+interface WeatherData {
+  temperature?: number;
+  conditions?: string;
+  humidity?: number;
+  windSpeed?: number;
+  windDirection?: string;
+  pressure?: number;
+  visibility?: number;
+  icon?: string;
+  timestamp?: string;
+}
+
+export const useWeatherData = () => {
+  const { location } = useApp();
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!location) {
+      setWeatherData(null);
+      return;
+    }
+
+    const fetchWeatherData = async () => {
+      setLoading(true);
+      setError(null);
+
+      // Use direct backend URL to bypass Vite proxy issues
+      const baseUrl = 'http://localhost:8080';
+
+      try {
+        // First, get the grid point for the location
+        // Round to 4 decimal places to avoid Weather.gov redirect issues
+        const lat = location.latitude.toFixed(4);
+        const lon = location.longitude.toFixed(4);
+        const pointPath = `/api/points/${lat},${lon}`;
+        const pointUrl = baseUrl + pointPath;
+        console.log('Fetching weather data from:', pointUrl);
+
+        const pointResponse = await fetch(pointUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!pointResponse.ok) {
+          const text = await pointResponse.text();
+          console.error('API response not OK:', pointResponse.status, text);
+          throw new Error(`Failed to fetch location data: ${pointResponse.status}`);
+        }
+
+        // Check if response is JSON (Weather.gov returns application/geo+json)
+        const contentType = pointResponse.headers.get('content-type');
+        if (!contentType || (!contentType.includes('application/json') && !contentType.includes('application/geo+json'))) {
+          const text = await pointResponse.text();
+          console.error('Response is not JSON:', contentType, text.substring(0, 500));
+          throw new Error('API returned non-JSON response');
+        }
+
+        const pointData = await pointResponse.json();
+        console.log('Point data received:', pointData);
+
+        if (!pointData.properties) {
+          throw new Error('Invalid response: missing properties');
+        }
+
+        const { gridId, gridX, gridY } = pointData.properties;
+
+        // Get the observation stations URL
+        const stationsUrl = pointData.properties.observationStations;
+        if (!stationsUrl) {
+          throw new Error('No observation stations found for this location');
+        }
+
+        // Fetch the list of stations
+        // Fix: ensure proper URL construction for relative paths
+        let stationsApiUrl;
+        if (baseUrl === '') {
+          // Using Vite proxy (relative URL)
+          stationsApiUrl = stationsUrl.replace('https://api.weather.gov', '/api');
+        } else {
+          // Using direct backend URL
+          stationsApiUrl = stationsUrl.replace('https://api.weather.gov', baseUrl + '/api');
+        }
+        console.log('Fetching stations from:', stationsApiUrl);
+        const stationsResponse = await fetch(stationsApiUrl);
+        if (!stationsResponse.ok) {
+          const errorText = await stationsResponse.text();
+          console.error('Failed to fetch stations:', stationsResponse.status, errorText);
+          throw new Error(`Failed to fetch observation stations: ${stationsResponse.status}`);
+        }
+
+        const stationsData = await stationsResponse.json();
+        const stations = stationsData.features || stationsData.observationStations || [];
+
+        if (stations.length === 0) {
+          throw new Error('No observation stations available');
+        }
+
+        // Get the first station's ID
+        const firstStation = stations[0];
+        const stationId = typeof firstStation === 'string'
+          ? firstStation.split('/').pop()
+          : firstStation.properties?.stationIdentifier;
+
+        if (stationId) {
+          console.log('Fetching observations from station:', stationId);
+          const obsUrl = baseUrl ? `${baseUrl}/api/stations/${stationId}/observations/latest` : `/api/stations/${stationId}/observations/latest`;
+
+          try {
+            const obsResponse = await fetch(obsUrl);
+
+            if (obsResponse.ok) {
+              const obsData = await obsResponse.json();
+              const props = obsData.properties;
+
+              setWeatherData({
+                temperature: props.temperature?.value ?
+                  Math.round(props.temperature.value * 9/5 + 32) : undefined,
+                conditions: props.textDescription,
+                humidity: props.relativeHumidity?.value,
+                windSpeed: props.windSpeed?.value ?
+                  Math.round(props.windSpeed.value * 2.237) : undefined,
+                windDirection: props.windDirection?.value !== null ?
+                  getWindDirection(props.windDirection.value) : undefined,
+                pressure: props.barometricPressure?.value ?
+                  (props.barometricPressure.value / 100).toFixed(2) : undefined,
+                visibility: props.visibility?.value ?
+                  Math.round(props.visibility.value / 1609.34) : undefined,
+                icon: props.icon,
+                timestamp: props.timestamp,
+              });
+            } else {
+              console.warn('No observation data available for station:', stationId);
+            }
+          } catch (obsError) {
+            console.warn('Failed to fetch observations from station:', stationId, obsError);
+            // Continue without observation data - location is still valid
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching weather data:', err);
+        setError('Failed to load weather data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWeatherData();
+  }, [location]);
+
+  return { weatherData, loading, error };
+};
+
+function getWindDirection(degrees: number): string {
+  const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+                      'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const index = Math.round(degrees / 22.5) % 16;
+  return directions[index];
+}
