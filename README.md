@@ -1,6 +1,8 @@
-# WeatherStar 4000+
+# WeatherStar 4000+ (React version!)
 
-A live version of this project is available at https://weatherstar.netbymatt.com
+A live version of the original project is available at https://weatherstar.netbymatt.com.
+
+This readme has been modified for my react / vite / etc changes. Please see the original repository for the orginal EJS version of this application.
 
 ## About
 
