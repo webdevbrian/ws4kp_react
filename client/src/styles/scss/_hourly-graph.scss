@@ -1,10 +1,14 @@
-@use 'shared/_colors'as c;
-@use 'shared/_utils'as u;
+@use 'shared/_colors' as c;
+@use 'shared/_utils' as u;
 
 #hourly-graph-html {
 	background-image: url(../images/backgrounds/1-chart.png);
 
 	.header {
+		.date-time {
+			display: none;
+		}
+
 		.right {
 			position: absolute;
 			top: 35px;
