@@ -1,6 +1,10 @@
 @use 'shared/_colors'as c;
 @use 'shared/_utils'as u;
 
+#hourly-html.weather-display {
+  background-image: url('../images/backgrounds/5.png');
+}
+
 .weather-display .main.hourly {
 	&.main {
 		overflow-y: hidden;
