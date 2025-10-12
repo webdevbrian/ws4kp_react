@@ -7,15 +7,18 @@ import HeaderBar from '../HeaderBar';
 const SpcOutlook: React.FC = () => {
   const { location } = useApp();
 
-  // Map a point to categorical severity for day 1-3 using IEM SPC GeoJSON (best-effort)
+  // Severity per day on 0–6 scale
+  // 0: No prediction, 1: TSTM, 2: MRGL, 3: SLGT, 4: ENH, 5: MDT, 6: HIGH
   const [daySeverity, setDaySeverity] = useState<Array<number | null>>([null, null, null]);
   const overrideActive = useRef(false);
+  // Test override: add ?spcTest=tstm,slgt,high or ?spcTest=0,3,6 to preview bar lengths
+  const [spcTestRaw, setSpcTestRaw] = useState<string | null>(null);
 
   useEffect(() => {
     if (overrideActive.current) return;
     if (!location) return;
     const { latitude: lat, longitude: lon } = location;
-    const cats = ['TSTM', 'MRGL', 'SLGT', 'ENH', 'MDT', 'HIGH', 'HIGH+'];
+    const cats = ['TSTM', 'MRGL', 'SLGT', 'ENH', 'MDT', 'HIGH'];
     const normalizeCat = (raw: string): string => {
       const s = (raw || '').toString().trim().toUpperCase();
       if (!s) return '';
@@ -27,7 +30,11 @@ const SpcOutlook: React.FC = () => {
       if (s.startsWith('HIGH')) return 'HIGH';
       return s;
     };
-    const severityIndex = (cat: string) => cats.indexOf(normalizeCat(cat));
+    // Map SPC category label to 1–6 scale. Unknown => 0
+    const severityScale = (cat: string) => {
+      const i = cats.indexOf(normalizeCat(cat));
+      return i >= 0 ? i + 1 : 0;
+    };
     const pointInPoly = (point: [number, number], polygon: [number, number][]) => {
       // Ray casting
       let inside = false;
@@ -43,21 +50,21 @@ const SpcOutlook: React.FC = () => {
     const visitFeature = (feat: any): number => {
       const p = feat.properties || {};
       const cat = (p.category ?? p.outlook ?? p.CAT ?? p.LABEL ?? p.label ?? '').toString();
-      const idx = severityIndex(cat);
-      if (idx < 0) return -1;
+      const scale = severityScale(cat);
+      if (scale <= 0) return 0;
       const geom = feat.geometry;
       const pt: [number, number] = [lon, lat];
       if (geom?.type === 'Polygon') {
         const ring = geom.coordinates?.[0] as [number, number][];
-        if (ring && pointInPoly(pt, ring)) return idx;
+        if (ring && pointInPoly(pt, ring)) return scale;
       } else if (geom?.type === 'MultiPolygon') {
         const polys = geom.coordinates as [[[number, number][]]];
         for (const poly of polys) {
           const ring = poly[0];
-          if (ring && pointInPoly(pt, ring)) return idx;
+          if (ring && pointInPoly(pt, ring)) return scale;
         }
       }
-      return -1;
+      return 0;
     };
     const fetchDay = async (day: 1 | 2 | 3) => {
       const url = `https://mesonet.agron.iastate.edu/geojson/spc_outlook.py?day=${day}&cat=categorical`;
@@ -65,21 +72,22 @@ const SpcOutlook: React.FC = () => {
         const res = await fetch(url);
         if (!res.ok) throw new Error('bad');
         const gj = await res.json();
-        let best = -1;
+        let best = 0;
         for (const f of gj.features || []) {
           const idx = visitFeature(f);
           if (idx > best) best = idx;
         }
-        return best >= 0 ? best : null;
+        // Always return a number on our 0–6 scale
+        return best;
       } catch {
-        return null;
+        return 0;
       }
     };
     (async () => {
       const [s1, s2, s3] = await Promise.all([fetchDay(1), fetchDay(2), fetchDay(3)]);
       setDaySeverity([s1, s2, s3]);
     })();
-  }, [location]);
+  }, [location, spcTestRaw]);
 
   const days = useMemo(() => {
     const names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -90,8 +98,6 @@ const SpcOutlook: React.FC = () => {
     return [d1, d2, d3];
   }, []);
 
-  // Test override: add ?spcTest=tstm,slgt,high or ?spcTest=0,2,5 to preview bar lengths
-  const [spcTestRaw, setSpcTestRaw] = useState<string | null>(null);
   const parseAndApplySpcTest = () => {
     let raw: string | null = null;
     // Prefer querystring
@@ -107,11 +113,13 @@ const SpcOutlook: React.FC = () => {
       const m2 = window.location.href.match(/spcTest=([^&#]+)/i);
       if (m2) raw = decodeURIComponent(m2[1]);
     }
-    // Persisted value across route changes / refreshes
     if (!raw) {
-      raw = sessionStorage.getItem('spcTest') || localStorage.getItem('spcTest');
+      // No override present: clear any prior test state and allow live fetch
+      overrideActive.current = false;
+      setSpcTestRaw(null);
+      setDaySeverity([null, null, null]);
+      return false;
     }
-    if (!raw) return false;
     if (raw.toLowerCase() === 'clear') {
       sessionStorage.removeItem('spcTest');
       localStorage.removeItem('spcTest');
@@ -126,12 +134,12 @@ const SpcOutlook: React.FC = () => {
       if (!t) return null;
       // numeric
       const num = Number(t);
-      if (!Number.isNaN(num) && num >= 0 && num <= 6) return num;
+      if (!Number.isNaN(num) && num >= 0 && num <= 6) return num; // 0..6 scale
       // label
       const lbl = t.toUpperCase();
       const norm = lbl.startsWith('T') ? 'TSTM' : lbl;
       const idx = cats.indexOf(norm);
-      return idx >= 0 ? idx : null;
+      return idx >= 0 ? idx + 1 : null; // map to 1..6
     };
     const tokens = raw.replace(/^#\/?/, '').split(/[\,\s]+/);
     let parts = tokens.map(parseOne).filter((x): x is number => x !== null);
@@ -144,15 +152,11 @@ const SpcOutlook: React.FC = () => {
     }
     if (parts.length === 1) parts = [parts[0], parts[0], parts[0]]; // replicate single across 3 days
     if (parts.length === 2) parts = [parts[0], parts[1], parts[1]];
-    // Tests start at 1; treat 0 (TSTM) as "no bar" for test mode
-    const partsForOver: Array<number | null> = parts.map(v => (v === 0 ? null : v));
-    const over: Array<number | null> = [partsForOver[0] ?? null, partsForOver[1] ?? null, partsForOver[2] ?? null];
+    const over: Array<number | null> = [parts[0] ?? null, parts[1] ?? null, parts[2] ?? null];
     overrideActive.current = true;
     setSpcTestRaw(raw);
     setDaySeverity(over);
-    // Save for subsequent navigations
-    try { sessionStorage.setItem('spcTest', raw); } catch { }
-    try { localStorage.setItem('spcTest', raw); } catch { }
+    // Do not persist by default to avoid sticky overrides across navigations
     return true;
   };
 
@@ -187,19 +191,16 @@ const SpcOutlook: React.FC = () => {
           <div className="days">
             {days.map((name, idx) => {
               const sev = daySeverity[idx];
-              const widthFor = (i: number) => {
-                // Explicit mapping by severity index
-                // 0: TSTM (live small; test hides); 1: MRGL baseline
-                // 2: interpolated between 1 and 3; 3..6 as specified
-                const map = [40, 60, 146, 208, 271, 332, 388];
-                const idx = Math.max(0, Math.min(map.length - 1, i));
-                return map[idx];
-              };
-              const width = typeof sev === 'number' ? widthFor(sev) : undefined;
+              // Map 0..6 severity to calibrated pixel width (existing bar widths)
+              // 0: none, 1: TSTM 40, 2: MRGL 60, 3: SLGT 146, 4: ENH 208, 5: MDT 271, 6: HIGH 388
+              const scaleToWidth = [0, 40, 60, 146, 208, 271, 388];
+              const width = typeof sev === 'number' ? scaleToWidth[Math.max(0, Math.min(6, sev))] : 0;
               return (
                 <div className="day" key={idx}>
                   <div className="day-name">{name}</div>
-                  {typeof sev === 'number' && <div className="risk-bar" style={{ width }} />}
+                  {typeof sev === 'number' && sev > 0 && (
+                    <div className="risk-bar" style={{ width }} />
+                  )}
                 </div>
               );
             })}
