@@ -10,8 +10,7 @@ const HourlyGraph: React.FC = () => {
   const { location } = useApp();
   const { forecastData, loading, error } = useForecastData();
 
-  const titleTop = 'Hourly';
-  const titleBottom = 'Graph';
+  const title = 'Hourly Graph';
 
   const data = useMemo(() => {
     const hours = (forecastData.hourly || []).slice(0, 24);
@@ -61,7 +60,7 @@ const HourlyGraph: React.FC = () => {
 
   return (
     <div className="display hourly-graph-display" style={{ position: 'relative' }}>
-      <HeaderBar titleLines={[titleTop, titleBottom]} />
+      <HeaderBar titleLines={[title]} />
       <div className="header">
         <div className="right">
           <div className="temperature">TEMPERATURE °F</div>
