@@ -44,7 +44,6 @@ const Settings: React.FC<SettingsProps> = ({ version }) => {
       <div className="heading">Selected displays</div>
       <div id="enabledDisplays">
         {[
-          'progress',
           'hourly',
           'hourly-graph',
           'travel',

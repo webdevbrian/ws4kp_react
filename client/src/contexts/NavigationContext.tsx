@@ -32,7 +32,6 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentDisplay, setCurrentDisplay] = useState('current-weather');
   const [displays, setDisplays] = useState<string[]>([
-    'progress',
     'hourly',
     'hourly-graph',
     'travel',
@@ -79,6 +78,13 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       return () => clearInterval(interval);
     }
   }, [isPlaying, next]);
+
+  // Keep currentDisplay valid if the list changes or excludes the current one
+  useEffect(() => {
+    if (!displays.includes(currentDisplay)) {
+      setCurrentDisplay(displays[0] || 'current-weather');
+    }
+  }, [displays]);
 
   const value = {
     isPlaying,

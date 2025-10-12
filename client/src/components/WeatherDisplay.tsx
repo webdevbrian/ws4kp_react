@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useApp } from '../contexts/AppContext';
-import Progress from './displays/Progress';
 import Hourly from './displays/Hourly';
 import HourlyGraph from './displays/HourlyGraph';
 import Travel from './displays/Travel';
@@ -49,12 +48,6 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ version }) => {
     <div id="divTwc">
       <div id="divTwcMain">
         <div id="container">
-          <div
-            id="progress-html"
-            className={`weather-display ${currentDisplay === 'progress' ? 'show' : ''}`}
-          >
-            <Progress />
-          </div>
           <div
             id="hourly-html"
             className={`weather-display ${currentDisplay === 'hourly' ? 'show' : ''}`}
