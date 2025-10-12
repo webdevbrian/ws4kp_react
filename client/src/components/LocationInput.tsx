@@ -28,10 +28,15 @@ const LocationInput: React.FC = () => {
             const state = addr.Region || addr.ShortRegion || '';
             setLocation({ latitude, longitude, city, state });
             setLocationText([city, state].filter(Boolean).join(', '));
+            // Immediately submit using precise coordinates and blur to prevent dropdown
+            handleSubmit(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+            if (inputRef.current) inputRef.current.blur();
           } catch (e) {
             console.warn('Reverse geocode failed, falling back to coordinates', e);
             setLocation({ latitude, longitude });
             setLocationText(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+            handleSubmit(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+            if (inputRef.current) inputRef.current.blur();
           }
         })();
       },
