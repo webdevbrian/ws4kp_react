@@ -16,8 +16,24 @@ const LocationInput: React.FC = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        setLocation({ latitude, longitude });
-        setLocationText(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        // Reverse geocode to get City, State for UI and app state
+        (async () => {
+          try {
+            const url = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?location=${longitude},${latitude}&f=pjson`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const addr = data.address || {};
+            const city = addr.City || addr.PlaceName || '';
+            const state = addr.Region || addr.ShortRegion || '';
+            setLocation({ latitude, longitude, city, state });
+            setLocationText([city, state].filter(Boolean).join(', '));
+          } catch (e) {
+            console.warn('Reverse geocode failed, falling back to coordinates', e);
+            setLocation({ latitude, longitude });
+            setLocationText(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          }
+        })();
       },
       (error) => {
         console.error('Error getting location:', error);
