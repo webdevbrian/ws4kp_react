@@ -1,11 +1,13 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { useForecastData } from '../../hooks/useForecastData';
 import HeaderBar from '../HeaderBar';
 
 // No image loading required for risk bar computation
 
 const SpcOutlook: React.FC = () => {
   const { location } = useApp();
+  const { forecastData } = useForecastData();
 
   // Severity per day on 0–6 scale
   // 0: No prediction, 1: TSTM, 2: MRGL, 3: SLGT, 4: ENH, 5: MDT, 6: HIGH
@@ -97,6 +99,66 @@ const SpcOutlook: React.FC = () => {
     const d3 = names[(now.getDay() + 2) % 7];
     return [d1, d2, d3];
   }, []);
+
+  // Heuristic severity (0..6) from daily forecast data (today, +1d, +2d)
+  const predictedSeverity = useMemo(() => {
+    const periods = forecastData.daily || [];
+    if (!periods.length) return [0, 0, 0];
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayIndex = (d: Date) => Math.floor((d.getTime() - startOfToday.getTime()) / (24 * 3600 * 1000));
+
+    const parseWindMph = (windSpeed: string, detailed: string): { sustained: number; gust: number } => {
+      let sustained = 0;
+      let gust = 0;
+      const nums = (windSpeed || '').match(/\d+/g);
+      if (nums && nums.length) {
+        sustained = Math.max(...nums.map(n => Number(n)));
+      }
+      const gm = (detailed || '').match(/gusts?\s+as\s+high\s+as\s+(\d+)\s?mph/i);
+      if (gm) gust = Math.max(gust, Number(gm[1]));
+      return { sustained, gust };
+    };
+
+    const severityFromText = (p: any): number => {
+      const text = `${p.shortForecast || ''} ${p.detailedForecast || ''}`.toLowerCase();
+      const hasThunder = /thunder|t-storm|tstorm|thunderstorm/.test(text);
+      const hasSevere = /severe|hail|tornado/.test(text);
+      const heavyRain = /heavy\s+rain|downpour|torrential/.test(text);
+      const strongStormWords = /strong|intense|damaging/.test(text);
+      const pop = typeof p.probabilityOfPrecipitation?.value === 'number' ? p.probabilityOfPrecipitation.value : null;
+      const { sustained, gust } = parseWindMph(p.windSpeed || '', p.detailedForecast || '');
+
+      let sev = 0;
+      if (hasThunder) sev = Math.max(sev, 1);
+      if (pop !== null) {
+        if (hasThunder && pop >= 70) sev = Math.max(sev, 4);
+        else if (hasThunder && pop >= 50) sev = Math.max(sev, 3);
+        else if (hasThunder && pop >= 30) sev = Math.max(sev, 2);
+        else if (!hasThunder && pop >= 80 && (sustained >= 20 || gust >= 30)) sev = Math.max(sev, 1);
+      }
+      if (heavyRain) sev = Math.max(sev, hasThunder ? 3 : 2);
+      if (strongStormWords) sev = Math.max(sev, 3);
+      if (sustained >= 25) sev = Math.max(sev, 2);
+      if (gust >= 40) sev = Math.max(sev, 3);
+      if (gust >= 50) sev = Math.max(sev, 4);
+      if (hasSevere) sev = Math.max(sev, 5);
+      if (/tornado/.test(text)) sev = Math.max(sev, 6);
+
+      return Math.min(6, Math.max(0, sev));
+    };
+
+    const buckets: number[] = [0, 0, 0];
+    for (const p of periods) {
+      const st = new Date(p.startTime);
+      const di = dayIndex(st);
+      if (di >= 0 && di <= 2) {
+        buckets[di] = Math.max(buckets[di], severityFromText(p));
+      }
+    }
+    return buckets;
+  }, [forecastData.daily]);
 
   const parseAndApplySpcTest = () => {
     let raw: string | null = null;
@@ -190,15 +252,17 @@ const SpcOutlook: React.FC = () => {
           {/* Days and gray risk bars based on SPC categorical severity for user's location */}
           <div className="days">
             {days.map((name, idx) => {
-              const sev = daySeverity[idx];
+              const sevPred = predictedSeverity[idx] ?? 0;
+              const sevLive = daySeverity[idx] ?? 0;
+              const sev = sevPred > 0 ? sevPred : sevLive;
               // Map 0..6 severity to calibrated pixel width (existing bar widths)
               // 0: none, 1: TSTM 40, 2: MRGL 60, 3: SLGT 146, 4: ENH 208, 5: MDT 271, 6: HIGH 388
               const scaleToWidth = [0, 40, 60, 146, 208, 271, 388];
-              const width = typeof sev === 'number' ? scaleToWidth[Math.max(0, Math.min(6, sev))] : 0;
+              const width = scaleToWidth[Math.max(0, Math.min(6, sev))];
               return (
                 <div className="day" key={idx}>
                   <div className="day-name">{name}</div>
-                  {typeof sev === 'number' && sev > 0 && (
+                  {sev > 0 && (
                     <div className="risk-bar" style={{ width }} />
                   )}
                 </div>
