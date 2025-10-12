@@ -20,8 +20,9 @@ const HourlyGraph: React.FC = () => {
     const maxT = Math.max(...temps) + 5;
     const rangeT = Math.max(1, maxT - minT);
     const precip = hours.map(h => (h.probabilityOfPrecipitation?.value ?? null));
-    // Optional cloud percent approximation (if not provided)
+    // Prefer real cloudCover% from data; fallback to approximation when missing
     const cloud = hours.map(h => {
+      if (typeof h.cloudCover === 'number') return h.cloudCover;
       const s = (h.shortForecast || '').toLowerCase();
       if (s.includes('clear') || s.includes('sunny') || s.includes('fair')) return 5;
       if (s.includes('partly')) return 40;

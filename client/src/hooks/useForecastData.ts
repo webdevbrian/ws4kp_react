@@ -19,6 +19,7 @@ interface Period {
     unitCode: string;
     value: number;
   };
+  cloudCover?: number; // percent (skyCover)
 }
 
 interface ForecastData {
@@ -58,10 +59,11 @@ export const useForecastData = () => {
         const pointData = await pointResponse.json();
         const { gridId, gridX, gridY } = pointData.properties;
 
-        // Fetch both hourly and daily forecasts
-        const [hourlyResponse, dailyResponse] = await Promise.all([
+        // Fetch hourly, daily, and gridpoint time series (for skyCover)
+        const [hourlyResponse, dailyResponse, gridpointResponse] = await Promise.all([
           fetch(`${baseUrl}/api/gridpoints/${gridId}/${gridX},${gridY}/forecast/hourly`),
-          fetch(`${baseUrl}/api/gridpoints/${gridId}/${gridX},${gridY}/forecast`)
+          fetch(`${baseUrl}/api/gridpoints/${gridId}/${gridX},${gridY}/forecast`),
+          fetch(`${baseUrl}/api/gridpoints/${gridId}/${gridX},${gridY}`)
         ]);
 
         let hourlyData = null;
@@ -75,6 +77,39 @@ export const useForecastData = () => {
         if (dailyResponse.ok) {
           const dailyJson = await dailyResponse.json();
           dailyData = dailyJson.properties?.periods || [];
+        }
+
+        // Try to enrich hourly data with cloud cover (skyCover from gridpoints)
+        if (gridpointResponse.ok && Array.isArray(hourlyData) && hourlyData.length > 0) {
+          try {
+            const gridJson = await gridpointResponse.json();
+            const skyCover = gridJson?.properties?.skyCover?.values || [];
+
+            // Minimal ISO8601 duration parser for PT#H / PT#M
+            const parseDurationMs = (iso: string): number => {
+              const m = iso.match(/^P(?:T(?:(\d+)H)?(?:(\d+)M)?)$/);
+              if (!m) return 0;
+              const hours = parseInt(m[1] || '0', 10);
+              const mins = parseInt(m[2] || '0', 10);
+              return (hours * 60 + mins) * 60 * 1000;
+            };
+
+            const intervals = skyCover.map((v: { validTime: string; value: number }) => {
+              const [startStr, durStr] = v.validTime.split('/');
+              const start = new Date(startStr);
+              const end = new Date(start.getTime() + parseDurationMs(durStr || 'PT1H'));
+              return { start, end, value: typeof v.value === 'number' ? v.value : null };
+            });
+
+            hourlyData = hourlyData.map((p: Period) => {
+              const st = new Date(p.startTime);
+              const match = intervals.find((iv: { start: Date; end: Date; value: number | null }) => iv.value !== null && st >= iv.start && st < iv.end);
+              return { ...p, cloudCover: match?.value ?? p.cloudCover };
+            });
+          } catch (e) {
+            // Non-fatal; leave cloudCover undefined
+            console.warn('Unable to map skyCover to hourly periods:', e);
+          }
         }
 
         setForecastData({

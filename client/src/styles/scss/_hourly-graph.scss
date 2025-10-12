@@ -5,6 +5,14 @@
 	background-image: url(../images/backgrounds/1-chart.png);
 
 	.header {
+		.title {
+			white-space: nowrap;
+			width: auto;
+		}
+
+		.title.single {
+			top: 40px;
+		}
 		.date-time {
 			display: none;
 		}
