@@ -227,7 +227,7 @@ const Radar: React.FC = () => {
       window.removeEventListener('resize', apply);
       ro.disconnect();
     };
-  // Re-run when location, region, or frames availability change
+    // Re-run when location, region, or frames availability change
   }, [region, location, frameUrls.length]);
 
   return (
@@ -303,7 +303,7 @@ const Radar: React.FC = () => {
                     src="/images/maps/radar-stretched.webp"
                     alt="stretched basemap"
                     ref={baseGridRef as any}
-                    style={{ display: 'block', width: '100%', height: '100%' }}
+                    style={{ display: 'block', width: '100%', height: '100%', position: 'relative', top: '5px', left: '-7px' }}
                   />
                   <div className="frame-overlay" ref={framesRef} style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
                     {frameUrls.map((u, idx) => (
