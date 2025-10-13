@@ -305,7 +305,7 @@ const Radar: React.FC = () => {
                     ref={baseGridRef as any}
                     style={{ display: 'block', width: '100%', height: '100%', position: 'relative', top: '5px', left: '-7px' }}
                   />
-                  <div className="frame-overlay" ref={framesRef} style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}>
+                  <div className="frame-overlay" ref={framesRef} style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none', opacity: '0.6' }}>
                     {frameUrls.map((u, idx) => (
                       <img
                         key={u}
