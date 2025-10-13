@@ -2,7 +2,7 @@
 
 A live version of the original project is available at https://weatherstar.netbymatt.com.
 
-This readme has been modified for my react / vite / etc changes. Please see the original repository for the orginal EJS version of this application.
+This readme has been modified for my react / vite / etc changes. Please see the original repository for the orginal version of this application.
 
 ## About
 
