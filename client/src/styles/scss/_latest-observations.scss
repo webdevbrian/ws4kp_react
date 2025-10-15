@@ -1,9 +1,11 @@
-@use 'shared/_colors'as c;
-@use 'shared/_utils'as u;
+@use 'shared/_colors' as c;
+@use 'shared/_utils' as u;
 
 .weather-display .latest-observations {
 
 	&.main {
+		width: 530px;
+		margin: 0 auto;
 		overflow-y: hidden;
 
 		.column-headers {
@@ -36,14 +38,18 @@
 
 		.temp {
 			left: 230px;
+			width: 40px;
+			text-align: right;
 		}
 
 		.weather {
 			left: 280px;
+			width: 140px;
 		}
 
 		.wind {
 			left: 430px;
+			width: 100px;
 		}
 
 		.observation-lines {
@@ -56,15 +62,20 @@
 				@include u.text-shadow();
 				position: relative;
 				height: 40px;
+				margin-bottom: 20px;
 
 				>div {
 					position: absolute;
 					top: 8px;
 				}
 
+				.location {
+					left: 0px;
+					width: 220px;
+				}
+
 				.wind {
 					white-space: pre;
-					text-align: right;
 				}
 			}
 		}
