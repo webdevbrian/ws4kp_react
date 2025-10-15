@@ -20,6 +20,19 @@ export const useNearbyStations = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const toMph = (value?: number | null, unitCode?: string | null): number | undefined => {
+    if (value === null || value === undefined || isNaN(value as any)) return undefined;
+    const u = (unitCode || '').toLowerCase();
+    const v = Number(value);
+    if (u.includes('wmo') && u.includes('m_s')) return Math.round(v * 2.23694);
+    if (u.includes('m_s')) return Math.round(v * 2.23694);
+    if (u.includes('km_h') || u.includes('km/h')) return Math.round(v / 1.60934);
+    if (u.includes('kn') || u.includes('kt')) return Math.round(v * 1.15078);
+    if (u.includes('mph') || u.includes('mi_h')) return Math.round(v);
+    // Fallback: assume m/s (NWS default)
+    return Math.round(v * 2.23694);
+  };
+
   useEffect(() => {
     if (!location) {
       setStations([]);
@@ -72,6 +85,7 @@ export const useNearbyStations = () => {
               const obsData = await obsResponse.json();
               const props = obsData.properties;
 
+              const mph = toMph(props.windSpeed?.value, (props.windSpeed as any)?.unitCode);
               nearbyStations.push({
                 stationId,
                 name: station.properties.name,
@@ -79,13 +93,12 @@ export const useNearbyStations = () => {
                 temperature: props.temperature?.value ?
                   Math.round(props.temperature.value * 9/5 + 32) : undefined,
                 conditions: props.textDescription,
-                windSpeed: props.windSpeed?.value ?
-                  Math.round(props.windSpeed.value * 2.237) : undefined,
+                windSpeed: mph,
                 windDirection: props.windDirection?.value !== null ?
                   getWindDirection(props.windDirection.value) : undefined,
                 humidity: props.relativeHumidity?.value,
                 pressure: props.barometricPressure?.value ?
-                  (props.barometricPressure.value / 100).toFixed(2) : undefined,
+                  Math.round((props.barometricPressure.value / 100) * 100) / 100 : undefined,
                 timestamp: props.timestamp,
               });
             }

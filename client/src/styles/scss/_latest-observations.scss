@@ -4,7 +4,7 @@
 .weather-display .latest-observations {
 
 	&.main {
-		width: 530px;
+		width: 505px;
 		margin: 0 auto;
 		overflow-y: hidden;
 
@@ -37,7 +37,7 @@
 		}
 
 		.temp {
-			left: 230px;
+			left: 218px;
 			width: 40px;
 			text-align: right;
 		}
@@ -49,7 +49,7 @@
 
 		.wind {
 			left: 430px;
-			width: 100px;
+			width: 74px;
 		}
 
 		.observation-lines {
@@ -71,11 +71,24 @@
 
 				.location {
 					left: 0px;
-					width: 220px;
+					width: 210px;
 				}
 
 				.wind {
-					white-space: pre;
+					white-space: nowrap;
+					display: flex;
+					align-items: baseline;
+					justify-content: space-between;
+
+					.dir {
+						text-align: left;
+					}
+
+					.spd {
+						margin-left: auto;
+						text-align: right;
+						min-width: 28px;
+					}
 				}
 			}
 		}

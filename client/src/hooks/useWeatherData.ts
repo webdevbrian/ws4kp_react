@@ -19,6 +19,19 @@ export const useWeatherData = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const toMph = (value?: number | null, unitCode?: string | null): number | undefined => {
+    if (value === null || value === undefined || isNaN(value as any)) return undefined;
+    const u = (unitCode || '').toLowerCase();
+    const v = Number(value);
+    if (u.includes('wmo') && u.includes('m_s')) return Math.round(v * 2.23694);
+    if (u.includes('m_s')) return Math.round(v * 2.23694);
+    if (u.includes('km_h') || u.includes('km/h')) return Math.round(v / 1.60934);
+    if (u.includes('kn') || u.includes('kt')) return Math.round(v * 1.15078);
+    if (u.includes('mph') || u.includes('mi_h')) return Math.round(v);
+    // Fallback: assume m/s (NWS default)
+    return Math.round(v * 2.23694);
+  };
+
   useEffect(() => {
     if (!location) {
       setWeatherData(null);
@@ -70,7 +83,7 @@ export const useWeatherData = () => {
           throw new Error('Invalid response: missing properties');
         }
 
-        const { gridId, gridX, gridY } = pointData.properties;
+        // gridId/gridX/gridY not needed for latest observations fetch
 
         // Get the observation stations URL
         const stationsUrl = pointData.properties.observationStations;
@@ -78,16 +91,8 @@ export const useWeatherData = () => {
           throw new Error('No observation stations found for this location');
         }
 
-        // Fetch the list of stations
-        // Fix: ensure proper URL construction for relative paths
-        let stationsApiUrl;
-        if (baseUrl === '') {
-          // Using Vite proxy (relative URL)
-          stationsApiUrl = stationsUrl.replace('https://api.weather.gov', '/api');
-        } else {
-          // Using direct backend URL
-          stationsApiUrl = stationsUrl.replace('https://api.weather.gov', baseUrl + '/api');
-        }
+        // Fetch the list of stations using direct backend URL
+        const stationsApiUrl = stationsUrl.replace('https://api.weather.gov', baseUrl + '/api');
         console.log('Fetching stations from:', stationsApiUrl);
         const stationsResponse = await fetch(stationsApiUrl);
         if (!stationsResponse.ok) {
@@ -125,12 +130,11 @@ export const useWeatherData = () => {
                   Math.round(props.temperature.value * 9/5 + 32) : undefined,
                 conditions: props.textDescription,
                 humidity: props.relativeHumidity?.value,
-                windSpeed: props.windSpeed?.value ?
-                  Math.round(props.windSpeed.value * 2.237) : undefined,
+                windSpeed: toMph(props.windSpeed?.value, (props.windSpeed as any)?.unitCode),
                 windDirection: props.windDirection?.value !== null ?
                   getWindDirection(props.windDirection.value) : undefined,
                 pressure: props.barometricPressure?.value ?
-                  (props.barometricPressure.value / 100).toFixed(2) : undefined,
+                  Math.round((props.barometricPressure.value / 100) * 100) / 100 : undefined,
                 visibility: props.visibility?.value ?
                   Math.round(props.visibility.value / 1609.34) : undefined,
                 icon: props.icon,

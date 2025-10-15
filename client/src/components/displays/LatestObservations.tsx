@@ -21,12 +21,6 @@ const LatestObservations: React.FC = () => {
       .trim();
   };
 
-  const formatWind = (dir?: string, speed?: number) => {
-    if (!dir || speed === undefined || speed === null) return '';
-    // Remove mph and compact, e.g., NNW15. Keep spacing minimal.
-    return `${dir}${Math.round(speed)}`;
-  };
-
   // Let's try to make the location names a bit more compact
   const formatLocationName = (raw?: string) => {
     const name = (raw || '').trim();
@@ -62,7 +56,10 @@ const LatestObservations: React.FC = () => {
                 <div className="location">{formatLocationName(s.name)}</div>
                 <div className="temp">{s.temperature !== undefined ? Math.round(s.temperature) : ''}</div>
                 <div className="weather">{shortenConditions(s.conditions)}</div>
-                <div className="wind">{formatWind(s.windDirection, s.windSpeed)}</div>
+                <div className="wind">
+                  <span className="dir">{s.windDirection || ''}</span>
+                  <span className="spd">{s.windSpeed !== undefined ? Math.round(s.windSpeed) : ''}</span>
+                </div>
               </div>
             ))
           )}
