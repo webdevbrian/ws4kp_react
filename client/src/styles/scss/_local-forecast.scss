@@ -1,7 +1,10 @@
-@use 'shared/_colors'as c;
-@use 'shared/_utils'as u;
+@use 'shared/_colors' as c;
+@use 'shared/_utils' as u;
 
 .weather-display .local-forecast {
+	width: 515px;
+	margin-left: 58px;
+
 	.container {
 		position: relative;
 		top: 15px;

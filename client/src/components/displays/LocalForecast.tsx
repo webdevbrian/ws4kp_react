@@ -1,77 +1,121 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useForecastData } from '../../hooks/useForecastData';
 import { useWeatherData } from '../../hooks/useWeatherData';
 import { useApp } from '../../contexts/AppContext';
+import HeaderBar from '../HeaderBar';
 
 const LocalForecast: React.FC = () => {
   const { location } = useApp();
-  const { weatherData } = useWeatherData();
   const { forecastData, loading, error } = useForecastData();
+  useWeatherData(); // ensure current data is fetched elsewhere; not used here
 
-  // Get next few periods for local forecast
-  const getUpcomingPeriods = () => {
-    if (!forecastData.daily) return [];
-    return forecastData.daily.slice(0, 4); // Today, tonight, tomorrow, tomorrow night
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const RAF = useRef<number | null>(null);
+  const state = useRef<'idle' | 'scrolling' | 'pause-bottom'>('idle');
+  const lastTs = useRef<number | null>(null);
+  const yRef = useRef<number>(0);
+
+  const toCardinal = (dir?: string) => {
+    const d = (dir || '').toUpperCase();
+    const map: Record<string, string> = { N: 'NORTH', S: 'SOUTH', E: 'EAST', W: 'WEST' };
+    if (map[d]) return map[d];
+    return d; // keep NE/NNW, etc.
   };
 
+  const up = (s: string) => (s || '').toUpperCase();
+
+  const normalizeWindSpeed = (ws?: string) => {
+    if (!ws) return '';
+    return ws.toUpperCase().replace(/\s*-\s*/g, ' TO ');
+  };
+
+  const makeSentence = (p: any) => {
+    if (!p) return '';
+    const name = up(p.name || '');
+    const isLow = !p.isDaytime || /NIGHT/i.test(p.name || '');
+    const hiLo = isLow ? 'LOW' : 'HIGH';
+    const temp = `${Math.round(p.temperature)}°${p.temperatureUnit || ''}`.replace('°F', '');
+    const wx = up(p.shortForecast || '');
+    const dir = toCardinal(p.windDirection);
+    const ws = normalizeWindSpeed(p.windSpeed);
+    const wind = ws ? `${dir ? dir + ' ' : ''}WIND ${ws}.` : '';
+    return `${name} ... ${wx}, ${hiLo} AROUND ${temp}. ${wind}`.trim();
+  };
+
+  const sentences = useMemo(() => {
+    const d = forecastData.daily || [];
+    return d.slice(0, 4).map(makeSentence).filter(Boolean);
+  }, [forecastData.daily]);
+
+  const paragraph = useMemo(() => sentences.join(' '), [sentences]);
+
+  // Auto-scroll logic (translateY)
+  useEffect(() => {
+    const el = containerRef.current; const inner = contentRef.current;
+    if (!el || !inner) return;
+    let startTimer: any; let pauseTimer: any;
+    const SPEED_PX_PER_SEC = 12; // slow, readable
+
+    // Ensure initial transform
+    inner.style.willChange = 'transform';
+    inner.style.transform = 'translateY(0px)';
+
+    const STEP = (ts: number) => {
+      if (!el || !inner) return;
+      if (state.current !== 'scrolling') { RAF.current = requestAnimationFrame(STEP); return; }
+      const max = Math.max(0, inner.scrollHeight - el.clientHeight);
+      if (max <= 0) { // No scrolling needed
+        state.current = 'idle';
+        return;
+      }
+      const prev = lastTs.current ?? ts;
+      const dt = Math.max(0, ts - prev) / 1000; // seconds
+      lastTs.current = ts;
+      const delta = SPEED_PX_PER_SEC * dt;
+      const next = yRef.current + delta;
+      if (next >= max) {
+        yRef.current = max;
+        inner.style.transform = `translateY(${-yRef.current}px)`;
+        state.current = 'pause-bottom';
+        pauseTimer = setTimeout(() => {
+          yRef.current = 0;
+          inner.style.transform = 'translateY(0px)';
+          lastTs.current = null;
+          // Wait 2s after resetting to the top before resuming
+          state.current = 'idle';
+          startTimer = setTimeout(() => { state.current = 'scrolling'; }, 2000);
+        }, 10000);
+      } else {
+        yRef.current = next;
+        inner.style.transform = `translateY(${-yRef.current}px)`;
+      }
+      RAF.current = requestAnimationFrame(STEP);
+    };
+    startTimer = setTimeout(() => {
+      lastTs.current = null;
+      state.current = 'scrolling';
+      RAF.current = requestAnimationFrame(STEP);
+    }, 2000);
+    return () => {
+      if (RAF.current) cancelAnimationFrame(RAF.current);
+      clearTimeout(startTimer); clearTimeout(pauseTimer);
+      state.current = 'idle';
+    };
+  }, [sentences.length]);
+
   return (
-    <div className="display local-forecast-display" style={{ backgroundColor: '#001a33', color: 'white', padding: '20px' }}>
-      <div className="header" style={{ borderBottom: '2px solid white', marginBottom: '20px', paddingBottom: '10px' }}>
-        <div className="title" style={{ fontSize: '24px', fontWeight: 'bold' }}>Local Forecast</div>
-        <div style={{ fontSize: '14px', marginTop: '5px' }}>
-          {location?.city && `${location.city}, ${location.state}`}
-        </div>
-      </div>
-      <div className="content" style={{ height: '350px', overflowY: 'auto' }}>
+    <div className="display local-forecast-display">
+      <HeaderBar titleLines={["Local", "Forecast"]} />
+      <div className="main local-forecast">
         {!location && <p>Please enter a location</p>}
         {loading && <p>Loading forecast...</p>}
         {error && <p>Error: {error}</p>}
-        {!loading && location && (
-          <div>
-            {/* Current Conditions Summary */}
-            {weatherData && (
-              <div style={{
-                marginBottom: '20px',
-                padding: '15px',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                borderRadius: '5px'
-              }}>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '10px' }}>
-                  Current Conditions
-                </div>
-                <div style={{ fontSize: '16px' }}>
-                  {weatherData.temperature}°F - {weatherData.conditions}
-                </div>
-                <div style={{ fontSize: '14px', marginTop: '5px' }}>
-                  Wind: {weatherData.windDirection} {weatherData.windSpeed} mph |
-                  Humidity: {weatherData.humidity}%
-                </div>
-              </div>
-            )}
-
-            {/* Forecast Periods */}
-            <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px' }}>
-              Forecast
+        {!loading && !error && location && (
+          <div className="container" ref={containerRef}>
+            <div className="forecasts" ref={contentRef}>
+              <div className="forecast">{paragraph}</div>
             </div>
-            {getUpcomingPeriods().map((period, index) => (
-              <div key={index} style={{
-                marginBottom: '15px',
-                padding: '10px',
-                borderLeft: '3px solid #4CAF50'
-              }}>
-                <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '5px' }}>
-                  {period.name}: {period.temperature}°{period.temperatureUnit}
-                </div>
-                <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
-                  {period.shortForecast}
-                </div>
-                {period.windSpeed && (
-                  <div style={{ fontSize: '13px', marginTop: '5px', color: '#aaa' }}>
-                    Wind: {period.windDirection} {period.windSpeed}
-                  </div>
-                )}
-              </div>
-            ))}
           </div>
         )}
       </div>
