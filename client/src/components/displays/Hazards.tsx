@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAlertsData } from '../../hooks/useAlertsData';
 import { useApp } from '../../contexts/AppContext';
+import HeaderBar from '../HeaderBar';
 
 const Hazards: React.FC = () => {
   const { location } = useApp();
@@ -28,53 +29,26 @@ const Hazards: React.FC = () => {
   };
 
   return (
-    <div className="display hazards-display" style={{ backgroundColor: '#001a33', color: 'white', padding: '20px' }}>
-      <div className="header" style={{ borderBottom: '2px solid white', marginBottom: '20px', paddingBottom: '10px' }}>
-        <div className="title" style={{ fontSize: '24px', fontWeight: 'bold' }}>Weather Hazards</div>
-        <div style={{ fontSize: '14px', marginTop: '5px' }}>
-          {location?.city && `${location.city}, ${location.state}`}
-        </div>
-      </div>
-      <div className="content" style={{ height: '350px', overflowY: 'auto' }}>
+    <div className="display hazards-display">
+      <HeaderBar titleLines={["Weather", "Hazards"]} />
+      <div className="main hazards">
         {!location && <p>Please enter a location</p>}
         {loading && <p>Loading alerts...</p>}
         {error && <p>Error: {error}</p>}
         {!loading && alerts.length === 0 && location && (
-          <div style={{ textAlign: 'center', padding: '50px', fontSize: '18px' }}>
+          <div style={{ textAlign: 'center', padding: '50px', fontFamily: 'Star4000', fontSize: 18 }}>
             No active weather alerts for this location
           </div>
         )}
         {alerts.length > 0 && !loading && (
-          <div className="alerts-list">
+          <div className="hazard-lines">
             {alerts.map((alert, index) => (
-              <div key={alert.id || index} style={{
-                padding: '15px',
-                marginBottom: '15px',
-                border: `2px solid ${getSeverityColor(alert.severity)}`,
-                borderRadius: '5px',
-                backgroundColor: 'rgba(0,0,0,0.3)'
-              }}>
-                <div style={{
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: getSeverityColor(alert.severity),
-                  marginBottom: '10px'
-                }}>
-                  {alert.headline}
-                </div>
-                <div style={{ fontSize: '14px', marginBottom: '5px' }}>
-                  <strong>Event:</strong> {alert.event}
-                </div>
-                <div style={{ fontSize: '14px', marginBottom: '5px' }}>
-                  <strong>Severity:</strong> {alert.severity} | <strong>Urgency:</strong> {alert.urgency}
-                </div>
-                <div style={{ fontSize: '14px', marginBottom: '5px' }}>
-                  <strong>Expires:</strong> {formatDate(alert.expires)}
-                </div>
+              <div key={alert.id || index} className="hazard" style={{ borderLeft: `4px solid ${getSeverityColor(alert.severity)}` }}>
+                <div style={{ fontFamily: 'Star4000', fontSize: 22, color: getSeverityColor(alert.severity), marginBottom: 6 }}>{alert.headline}</div>
+                <div style={{ fontFamily: 'Star4000 Small', fontSize: 18 }}>Event: {alert.event} • Severity: {alert.severity} • Urgency: {alert.urgency}</div>
+                <div style={{ fontFamily: 'Star4000 Small', fontSize: 18, marginTop: 4 }}>Expires: {formatDate(alert.expires)}</div>
                 {alert.instruction && (
-                  <div style={{ fontSize: '14px', marginTop: '10px', fontStyle: 'italic' }}>
-                    {alert.instruction}
-                  </div>
+                  <div style={{ fontFamily: 'Star4000 Small', fontSize: 18, marginTop: 8 }}>{alert.instruction}</div>
                 )}
               </div>
             ))}
