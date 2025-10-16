@@ -2,6 +2,7 @@ import React from 'react';
 import { useTravelCities } from '../../hooks/useTravelCities';
 import { useTravelWeatherData } from '../../hooks/useTravelWeatherData';
 import { getWeatherIconPath } from '../../utils/weatherIcons';
+import HeaderBar from '../HeaderBar';
 
 const Travel: React.FC = () => {
   const { cities, loading: citiesLoading, error: citiesError } = useTravelCities();
@@ -11,7 +12,8 @@ const Travel: React.FC = () => {
   const error = citiesError || weatherError;
 
   return (
-    <div className="weather-display travel">
+    <div className="display travel-display">
+      <HeaderBar titleLines={["Travel"]} />
       <div className="main travel">
         <div className="column-headers">
           <div className="temp low">LOW</div>

@@ -22,13 +22,31 @@ export const useTravelCities = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('http://localhost:8080/data/travelcities.json');
-        if (!response.ok) {
-          throw new Error('Failed to fetch travel cities');
+        const tryUrls = [
+          '/data/travelcities.json',
+          'http://localhost:8080/data/travelcities.json',
+          '/datagenerators/output/travelcities.json',
+        ];
+
+        let loaded: TravelCity[] | null = null;
+        let lastErr: any = null;
+        for (const url of tryUrls) {
+          try {
+            const res = await fetch(url);
+            if (!res.ok) { lastErr = new Error(`HTTP ${res.status}`); continue; }
+            const j = await res.json();
+            loaded = j;
+            break;
+          } catch (e) {
+            lastErr = e;
+          }
         }
 
-        const data = await response.json();
-        setCities(data);
+        if (!loaded) {
+          throw lastErr || new Error('Failed to fetch travel cities');
+        }
+
+        setCities(loaded);
       } catch (err) {
         console.error('Error fetching travel cities:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch travel cities');
