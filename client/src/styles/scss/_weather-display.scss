@@ -125,7 +125,8 @@
 	margin-top: 3px;
 	position: absolute;
 	bottom: 0px;
-	z-index: 1;
+	z-index: 5; // ensure it sits above section content
+	background-color: c.$blue-box; // default background like other sections
 
 	&.hazard {
 		background-color: rgb(112, 35, 35);
