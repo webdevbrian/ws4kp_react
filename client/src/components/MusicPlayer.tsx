@@ -13,7 +13,7 @@ interface PlaylistResponse {
 }
 
 const MusicPlayer: React.FC = () => {
-  const { mediaEnabled, setMediaAvailable, musicTrack, setMusicTrack } = useApp();
+  const { mediaEnabled, setMediaAvailable, setMusicTrack } = useApp();
   const [tracks, setTracks] = useState<string[]>([]);
   const [idx, setIdx] = useState<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);

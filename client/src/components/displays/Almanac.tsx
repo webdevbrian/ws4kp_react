@@ -40,30 +40,6 @@ const Almanac: React.FC = () => {
     return { phaseIndex };
   };
 
-  const primaryPhaseFor = (phaseIndex: number) => {
-    // Map to nearest of New (0), First Quarter (0.25), Full (0.5), Last Quarter (0.75)
-    const targets = [
-      { key: 'new', v: 0, file: 'New-Moon.gif', label: 'New Moon' },
-      { key: 'first', v: 0.25, file: 'First-Quarter.gif', label: 'First Quarter' },
-      { key: 'full', v: 0.5, file: 'Full-Moon.gif', label: 'Full Moon' },
-      { key: 'last', v: 0.75, file: 'Last-Quarter.gif', label: 'Last Quarter' },
-    ];
-    const wrapDiff = (a: number, b: number) => {
-      const d = Math.abs(a - b);
-      return Math.min(d, 1 - d);
-    };
-    let best = targets[0];
-    let bestDiff = wrapDiff(phaseIndex, targets[0].v);
-    for (let i = 1; i < targets.length; i++) {
-      const diff = wrapDiff(phaseIndex, targets[i].v);
-      if (diff < bestDiff) {
-        best = targets[i];
-        bestDiff = diff;
-      }
-    }
-    return best;
-  };
-
   const wrapDiff = (a: number, b: number) => {
     const d = Math.abs(a - b);
     return Math.min(d, 1 - d);

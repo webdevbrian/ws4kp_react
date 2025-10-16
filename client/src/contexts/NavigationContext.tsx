@@ -29,9 +29,7 @@ interface NavigationProviderProps {
 }
 
 export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentDisplay, setCurrentDisplay] = useState('current-weather');
-  const [displays, setDisplays] = useState<string[]>([
+  const defaultDisplays = [
     'hourly',
     'hourly-graph',
     'travel',
@@ -44,7 +42,25 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     'extended-forecast',
     'radar',
     'hazards'
-  ]);
+  ];
+
+  const [isPlaying, setIsPlaying] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('nav.isPlaying');
+      return v === '1' || v === 'true';
+    } catch { return false; }
+  });
+  const [currentDisplay, setCurrentDisplay] = useState<string>(() => {
+    try { return localStorage.getItem('nav.currentDisplay') || 'current-weather'; }
+    catch { return 'current-weather'; }
+  });
+  const [displays, setDisplays] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('nav.displays');
+      const parsed = raw ? JSON.parse(raw) : null;
+      return Array.isArray(parsed) && parsed.length ? parsed : defaultDisplays;
+    } catch { return defaultDisplays; }
+  });
 
   const next = useCallback(() => {
     const currentIndex = displays.indexOf(currentDisplay);
@@ -78,6 +94,19 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       return () => clearInterval(interval);
     }
   }, [isPlaying, next]);
+
+  // Persist core navigation states
+  useEffect(() => {
+    try { localStorage.setItem('nav.isPlaying', isPlaying ? '1' : '0'); } catch {}
+  }, [isPlaying]);
+
+  useEffect(() => {
+    try { localStorage.setItem('nav.currentDisplay', currentDisplay); } catch {}
+  }, [currentDisplay]);
+
+  useEffect(() => {
+    try { localStorage.setItem('nav.displays', JSON.stringify(displays)); } catch {}
+  }, [displays]);
 
   // Keep currentDisplay valid if the list changes or excludes the current one
   useEffect(() => {
