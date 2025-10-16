@@ -68,18 +68,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const serverAvailable = window.WS4KP_SERVER_AVAILABLE || false;
 
   useEffect(() => {
-    try { localStorage.setItem('app.scanlines', scanlines ? '1' : '0'); } catch {}
+    try { localStorage.setItem('app.scanlines', scanlines ? '1' : '0'); } catch { }
     const container = document.getElementById('container');
     if (container) container.classList.toggle('scanlines', scanlines);
     document.body.classList.remove('scanlines');
   }, [scanlines]);
 
   useEffect(() => {
-    try { localStorage.setItem('app.mediaEnabled', mediaEnabled ? '1' : '0'); } catch {}
+    try { localStorage.setItem('app.mediaEnabled', mediaEnabled ? '1' : '0'); } catch { }
   }, [mediaEnabled]);
 
   useEffect(() => {
-    try { localStorage.setItem('app.musicTrack', musicTrack || ''); } catch {}
+    try { localStorage.setItem('app.musicTrack', musicTrack || ''); } catch { }
   }, [musicTrack]);
 
   const value = {
