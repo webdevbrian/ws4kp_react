@@ -13,7 +13,15 @@ const HourlyGraph: React.FC = () => {
   const title = 'Hourly Graph';
 
   const data = useMemo(() => {
-    const hours = (forecastData.hourly || []).slice(0, 24);
+    const all = forecastData.hourly || [];
+    if (all.length === 0) return null;
+    const now = new Date();
+    const startHour = new Date(now);
+    startHour.setMinutes(0, 0, 0); // current hour
+    // find the first period whose startTime >= current hour
+    let firstIdx = all.findIndex(h => new Date(h.startTime).getTime() >= startHour.getTime());
+    if (firstIdx === -1) firstIdx = 0;
+    const hours = all.slice(firstIdx, firstIdx + 24);
     if (hours.length === 0) return null;
     const temps = hours.map(h => h.temperature);
     const minT = Math.min(...temps) - 5;
@@ -22,7 +30,7 @@ const HourlyGraph: React.FC = () => {
     const precip = hours.map(h => (h.probabilityOfPrecipitation?.value ?? null));
     // Prefer real cloudCover% from data; fallback to approximation when missing
     const cloud = hours.map(h => {
-      if (typeof h.cloudCover === 'number') return h.cloudCover;
+      if (typeof (h as any).cloudCover === 'number') return (h as any).cloudCover as number;
       const s = (h.shortForecast || '').toLowerCase();
       if (s.includes('clear') || s.includes('sunny') || s.includes('fair')) return 5;
       if (s.includes('partly')) return 40;
@@ -30,7 +38,7 @@ const HourlyGraph: React.FC = () => {
       if (s.includes('cloud')) return 90;
       return null;
     });
-    return { hours, temps, minT, maxT, rangeT, precip, cloud };
+    return { hours, temps, minT, maxT, rangeT, precip, cloud, startHour } as const;
   }, [forecastData.hourly]);
 
   const xFor = (i: number, n: number) => (i / Math.max(1, n - 1)) * W;
@@ -40,17 +48,15 @@ const HourlyGraph: React.FC = () => {
   const sixHourLabels = useMemo(() => {
     if (!data) return [] as { x: number; label: string }[];
     const n = data.hours.length;
-    const start = new Date(data.hours[0].startTime);
     const labels: { x: number; label: string }[] = [];
-    let t = new Date(start);
-    const mod = t.getHours() % 6;
-    if (mod !== 0) t.setHours(t.getHours() + (6 - mod));
-    for (let k = 0; k < 5; k++) {
+    // Start exactly at current local hour (data.startHour)
+    let t = new Date(data.startHour);
+    for (let k = 0; k < 5; k++) { // show start, +6h, +12h, +18h, +24h
       const lblH = t.getHours();
       const ampm = lblH >= 12 ? 'P' : 'A';
       const hh = (lblH % 12) || 12;
       const label = `${hh}${ampm}`;
-      const hoursFromStart = (t.getTime() - start.getTime()) / 3600000;
+      const hoursFromStart = (t.getTime() - data.startHour.getTime()) / 3600000;
       const idxFloat = Math.min(n - 1, Math.max(0, hoursFromStart));
       const x = xFor(idxFloat, n);
       labels.push({ x, label });
