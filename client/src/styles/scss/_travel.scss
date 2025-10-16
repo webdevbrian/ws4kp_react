@@ -41,7 +41,8 @@
 	}
 
 	.travel-lines {
-		min-height: 338px;
+		height: 338px;
+		overflow: hidden;
 		padding-top: 10px;
 
 		background: repeating-linear-gradient(0deg, c.$gradient-main-background-2 0px,
