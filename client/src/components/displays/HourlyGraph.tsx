@@ -65,6 +65,27 @@ const HourlyGraph: React.FC = () => {
     return labels;
   }, [data]);
 
+  const tempPoints = useMemo(() => {
+    if (!data) return '';
+    return data.temps.map((t, i) => `${xFor(i, data.hours.length)},${yForTemp(t, data.minT, data.rangeT)}`).join(' ');
+  }, [data]);
+
+  const cloudPoints = useMemo(() => {
+    if (!data) return '';
+    return data.cloud.map((v, i) => {
+      const y = typeof v === 'number' ? yForPct(v) : yForPct(0);
+      return `${xFor(i, data.hours.length)},${y}`;
+    }).join(' ');
+  }, [data]);
+
+  const precipPoints = useMemo(() => {
+    if (!data) return '';
+    return data.precip.map((v, i) => {
+      const y = typeof v === 'number' ? yForPct(v) : yForPct(0);
+      return `${xFor(i, data.hours.length)},${y}`;
+    }).join(' ');
+  }, [data]);
+
   return (
     <div className="display hourly-graph-display" style={{ position: 'relative' }}>
       <HeaderBar titleLines={[title]} />
@@ -95,22 +116,24 @@ const HourlyGraph: React.FC = () => {
             <div className="chart">
               <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
                 <rect x={0} y={0} width={W} height={H} fill="rgba(10,20,60,0)" />
-                <polyline fill="none" stroke="#ff0000" strokeWidth={3}
-                  strokeLinejoin="round" strokeLinecap="round"
-                  points={data.temps.map((t, i) => `${xFor(i, data.hours.length)},${yForTemp(t, data.minT, data.rangeT)}`).join(' ')} />
+                {/* Temperature line with shadow */}
+                <polyline fill="none" stroke="#000" strokeOpacity={0.6} strokeWidth={6} strokeLinejoin="round" strokeLinecap="round" points={tempPoints} />
+                <polyline fill="none" stroke="#ff0000" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" points={tempPoints} />
+
+                {/* Cloud % line with shadow (only if any numeric) */}
                 {data.cloud.some(v => typeof v === 'number') && (
-                  <polyline fill="none" stroke="#d3d3d3" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round"
-                    points={data.cloud.map((v, i) => {
-                      const y = typeof v === 'number' ? yForPct(v) : null;
-                      return `${xFor(i, data.hours.length)},${y ?? yForPct(0)}`;
-                    }).join(' ')} />
+                  <>
+                    <polyline fill="none" stroke="#000" strokeOpacity={0.6} strokeWidth={6} strokeLinejoin="round" strokeLinecap="round" points={cloudPoints} />
+                    <polyline fill="none" stroke="#d3d3d3" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" points={cloudPoints} />
+                  </>
                 )}
+
+                {/* Precip % line with shadow (only if any numeric) */}
                 {data.precip.some(v => typeof v === 'number') && (
-                  <polyline fill="none" stroke="#00ffff" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round"
-                    points={data.precip.map((v, i) => {
-                      const y = typeof v === 'number' ? yForPct(v) : null;
-                      return `${xFor(i, data.hours.length)},${y ?? yForPct(0)}`;
-                    }).join(' ')} />
+                  <>
+                    <polyline fill="none" stroke="#000" strokeOpacity={0.6} strokeWidth={6} strokeLinejoin="round" strokeLinecap="round" points={precipPoints} />
+                    <polyline fill="none" stroke="#00ffff" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" points={precipPoints} />
+                  </>
                 )}
               </svg>
             </div>
