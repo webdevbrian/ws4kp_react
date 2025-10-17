@@ -19,7 +19,7 @@ const Hazards: React.FC = () => {
   };
 
   const getSeverityColor = (severity: string) => {
-    switch(severity?.toLowerCase()) {
+    switch (severity?.toLowerCase()) {
       case 'extreme': return '#FF0000';
       case 'severe': return '#FFA500';
       case 'moderate': return '#FFFF00';
@@ -43,8 +43,8 @@ const Hazards: React.FC = () => {
         {alerts.length > 0 && !loading && (
           <div className="hazard-lines">
             {alerts.map((alert, index) => (
-              <div key={alert.id || index} className="hazard" style={{ borderLeft: `4px solid ${getSeverityColor(alert.severity)}` }}>
-                <div style={{ fontFamily: 'Star4000', fontSize: 22, color: getSeverityColor(alert.severity), marginBottom: 6 }}>{alert.headline}</div>
+              <div key={alert.id || index} className="hazard" style={{}}>
+                <div style={{ fontFamily: 'Star4000', fontSize: 22, marginBottom: 6 }}>{alert.headline}</div>
                 <div style={{ fontFamily: 'Star4000 Small', fontSize: 18 }}>Event: {alert.event} • Severity: {alert.severity} • Urgency: {alert.urgency}</div>
                 <div style={{ fontFamily: 'Star4000 Small', fontSize: 18, marginTop: 4 }}>Expires: {formatDate(alert.expires)}</div>
                 {alert.instruction && (
