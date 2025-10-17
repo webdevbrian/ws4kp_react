@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import HeaderBar from '../HeaderBar';
+import SunCalc from 'suncalc';
+import { DateTime } from 'luxon';
 
 type SunTimes = {
   sunrise?: string;
   sunset?: string;
 };
 
-const toLocalTime = (isoUtc?: string) => {
+const toLocalTime = (isoUtc?: string, tz?: string) => {
   if (!isoUtc) return '--:--';
   try {
-    const d = new Date(isoUtc);
-    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const dt = DateTime.fromISO(isoUtc, { zone: 'utc' });
+    const local = tz ? dt.setZone(tz) : dt;
+    return local.toFormat('h:mm a');
   } catch {
     return '--:--';
   }
@@ -20,47 +23,58 @@ const toLocalTime = (isoUtc?: string) => {
 const formatDate = (d: Date) => d.toISOString().slice(0, 10);
 
 const Almanac: React.FC = () => {
-  const { location } = useApp();
+  const { location, serverAvailable } = useApp();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [today, setToday] = useState<SunTimes>({});
   const [tomorrow, setTomorrow] = useState<SunTimes>({});
+  const [timeZone, setTimeZone] = useState<string | null>(null);
 
-  const moonFor = (d: Date) => {
-    // Simple moon phase approximation (0=new, 0.5=full)
-    const year = d.getUTCFullYear();
-    const month = d.getUTCMonth() + 1;
-    const day = d.getUTCDate();
-    let r = year % 100;
-    r %= 19;
-    if (r > 9) r -= 19;
-    r = ((r * 11) % 30) + month + day;
-    if (month < 3) r += 2;
-    const phaseIndex = (r < 0 ? r + 30 : r) / 30; // 0..1
-    return { phaseIndex };
-  };
+  const moonPhaseValue = (d: Date) => SunCalc.getMoonIllumination(d).phase;
 
   const wrapDiff = (a: number, b: number) => {
     const d = Math.abs(a - b);
     return Math.min(d, 1 - d);
   };
 
-  const findNextPhase = (start: Date, target: number) => {
-    const d = new Date(start);
-    for (let i = 0; i < 60; i++) {
-      const { phaseIndex } = moonFor(d);
-      if (wrapDiff(phaseIndex, target) <= 0.03) {
-        return new Date(d);
+  const addMinutes = (d: Date, minutes: number) => {
+    const nd = new Date(d.getTime());
+    nd.setMinutes(nd.getMinutes() + minutes);
+    return nd;
+  };
+
+  const searchRange = (start: Date, end: Date, stepMinutes: number, target: number) => {
+    let best = new Date(start);
+    let bestDiff = Number.POSITIVE_INFINITY;
+    for (let t = start.getTime(); t <= end.getTime(); t += stepMinutes * 60 * 1000) {
+      const dt = new Date(t);
+      const phase = moonPhaseValue(dt);
+      const diff = wrapDiff(phase, target);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = dt;
       }
-      d.setDate(d.getDate() + 1);
     }
-    return null;
+    return best;
+  };
+
+  const findNextPhaseTime = (start: Date, target: number) => {
+    const coarseEnd = addMinutes(start, 32 * 24 * 60);
+    const coarse = searchRange(start, coarseEnd, 360, target);
+    const fineStart = addMinutes(coarse, -12 * 60);
+    const fineEnd = addMinutes(coarse, 12 * 60);
+    const fine = searchRange(fineStart, fineEnd, 60, target);
+    const finestStart = addMinutes(fine, -3 * 60);
+    const finestEnd = addMinutes(fine, 3 * 60);
+    const finest = searchRange(finestStart, finestEnd, 5, target);
+    return finest;
   };
 
   useEffect(() => {
     if (!location) {
       setToday({});
       setTomorrow({});
+      setTimeZone(null);
       return;
     }
 
@@ -92,6 +106,16 @@ const Almanac: React.FC = () => {
 
         setToday({ sunrise: j1.results.sunrise, sunset: j1.results.sunset });
         setTomorrow({ sunrise: j2.results.sunrise, sunset: j2.results.sunset });
+
+        try {
+          const base = serverAvailable ? 'http://localhost:8080/api' : 'https://api.weather.gov';
+          const tzRes = await fetch(`${base}/points/${lat.toFixed(4)},${lon.toFixed(4)}`);
+          if (tzRes.ok) {
+            const tzJson = await tzRes.json();
+            const tz = tzJson?.properties?.timeZone as string | undefined;
+            if (tz) setTimeZone(tz);
+          }
+        } catch {}
       } catch (e: any) {
         setError(e?.message || 'Unable to load almanac');
       } finally {
@@ -118,12 +142,12 @@ const Almanac: React.FC = () => {
                   <div className="grid-item row-label" style={{ gridColumn: 1, gridRow: 3 }}>Sunset:</div>
 
                   <div className="grid-item header" style={{ gridColumn: 2, gridRow: 1 }}>Today</div>
-                  <div className="grid-item time" style={{ gridColumn: 2, gridRow: 2 }}>{toLocalTime(today.sunrise)}</div>
-                  <div className="grid-item time" style={{ gridColumn: 2, gridRow: 3 }}>{toLocalTime(today.sunset)}</div>
+                  <div className="grid-item time" style={{ gridColumn: 2, gridRow: 2 }}>{toLocalTime(today.sunrise, timeZone ?? undefined)}</div>
+                  <div className="grid-item time" style={{ gridColumn: 2, gridRow: 3 }}>{toLocalTime(today.sunset, timeZone ?? undefined)}</div>
 
                   <div className="grid-item header" style={{ gridColumn: 3, gridRow: 1 }}>Tomorrow</div>
-                  <div className="grid-item time" style={{ gridColumn: 3, gridRow: 2 }}>{toLocalTime(tomorrow.sunrise)}</div>
-                  <div className="grid-item time" style={{ gridColumn: 3, gridRow: 3 }}>{toLocalTime(tomorrow.sunset)}</div>
+                  <div className="grid-item time" style={{ gridColumn: 3, gridRow: 2 }}>{toLocalTime(tomorrow.sunrise, timeZone ?? undefined)}</div>
+                  <div className="grid-item time" style={{ gridColumn: 3, gridRow: 3 }}>{toLocalTime(tomorrow.sunset, timeZone ?? undefined)}</div>
                 </div>
 
                 <div className="moon">
@@ -137,14 +161,13 @@ const Almanac: React.FC = () => {
                       { label: 'Last Quarter', file: 'Last-Quarter.gif', v: 0.75 },
                     ] as const;
                     const fmt = (d: Date) => {
-                      const mon = d.toLocaleDateString(undefined, { month: 'short' });
-                      const day = d.toLocaleDateString(undefined, { day: '2-digit' });
-                      return `${mon}-${day}`;
+                      const tz = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+                      return DateTime.fromJSDate(d, { zone: 'utc' }).setZone(tz).toFormat('LLL-dd');
                     };
                     const imgSrc = (file: string) => `/images/icons/moon-phases/${file}`;
 
                     const results = items.map(item => {
-                      const date = findNextPhase(now, item.v) || now;
+                      const date = findNextPhaseTime(now, item.v) || now;
                       return { ...item, date };
                     });
 
