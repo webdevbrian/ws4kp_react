@@ -40,7 +40,7 @@ const LocalForecast: React.FC = () => {
     const dir = toCardinal(p.windDirection);
     const ws = normalizeWindSpeed(p.windSpeed);
     const wind = ws ? `${dir ? dir + ' ' : ''}WIND ${ws}.` : '';
-    return `${name} ... ${wx}, ${hiLo} AROUND ${temp}. ${wind}`.trim();
+    return `${name}...${wx}, ${hiLo} AROUND ${temp}. ${wind}`.trim();
   };
 
   const sentences = useMemo(() => {

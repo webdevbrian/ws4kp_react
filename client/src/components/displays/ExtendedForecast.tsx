@@ -58,6 +58,7 @@ const ExtendedForecast: React.FC = () => {
 
   const conditionLines = (short?: string) => {
     if (!short) return [''];
+    if (short.toLowerCase().includes('thunder')) return ["T'Storms"];
     const stop = new Set(['chance','slight','likely','then','and','with','of','becoming','a','the','patchy','areas','mostly','partly']);
     const words = short
       .split(/\s+/)
