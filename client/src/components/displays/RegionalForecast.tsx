@@ -70,7 +70,7 @@ const RegionalForecast: React.FC = () => {
 	// Adjustable MAP controls (apply to the basemap itself)
 	const MAP_SCALE = 1.3; // multiply the computed regional scale by this
 	const MAP_OFFSET_X = 30; // px shift of the basemap after centering
-	const MAP_OFFSET_Y = -50; // px shift of the basemap after centering
+	const MAP_OFFSET_Y = -90; // px shift of the basemap after centering
 
 	// Map-only offset (moves only the basemap image, not the overlay). Units are visual px.
 	const MAP_ONLY_OFFSET_X = -80;
