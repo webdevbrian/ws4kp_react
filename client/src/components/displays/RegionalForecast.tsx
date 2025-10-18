@@ -69,12 +69,12 @@ const RegionalForecast: React.FC = () => {
 
 	// Adjustable MAP controls (apply to the basemap itself)
 	const MAP_SCALE = 1.3; // multiply the computed regional scale by this
-	const MAP_OFFSET_X = 50; // px shift of the basemap after centering
-	const MAP_OFFSET_Y = -10; // px shift of the basemap after centering
+	const MAP_OFFSET_X = 30; // px shift of the basemap after centering
+	const MAP_OFFSET_Y = -50; // px shift of the basemap after centering
 
 	// Map-only offset (moves only the basemap image, not the overlay). Units are visual px.
-	const MAP_ONLY_OFFSET_X = -130;
-	const MAP_ONLY_OFFSET_Y = 10;
+	const MAP_ONLY_OFFSET_X = -80;
+	const MAP_ONLY_OFFSET_Y = 30;
 
 	// Adjustable UI sizes for city label, temperature text, and icon
 	const CITY_NAME_SIZE = 4; // px
@@ -164,16 +164,17 @@ const RegionalForecast: React.FC = () => {
 	const majorObs = useMemo(() => {
 		const seen = new Set<string>(); const list: typeof obs = [] as any;
 		for (const s of obs) {
-			const city = (s.name || '').split(',')[0].trim(); if (!city) continue;
-			const key = city.toLowerCase(); if (seen.has(key)) continue; seen.add(key);
+			if (typeof s.lat !== 'number' || typeof s.lon !== 'number') continue;
+			const key = `${Math.round(s.lat * 20) / 20}_${Math.round(s.lon * 20) / 20}`; // ~0.05° grid
+			if (seen.has(key)) continue; seen.add(key);
 			list.push(s); if (list.length >= 12) break;
 		}
 		return list;
 	}, [obs]);
 
 	// Collision thresholds (in pixels) for skipping overlapping blocks
-	const COLLIDE_DX = 20; // horizontal proximity threshold
-	const COLLIDE_DY = 14; // vertical proximity threshold
+	const COLLIDE_DX = 10; // horizontal proximity threshold
+	const COLLIDE_DY = 8; // vertical proximity threshold
 
 	return (
 		<div className="display regional-forecast-display">

@@ -9,6 +9,7 @@ import HeaderBar from '../HeaderBar';
 const SpcOutlook: React.FC = () => {
   const { location } = useApp();
   const { forecastData } = useForecastData();
+  const ENABLE_SPC = false;
 
   // Severity per day on 0–6 scale
   // 0: No prediction, 1: TSTM, 2: MRGL, 3: SLGT, 4: ENH, 5: MDT, 6: HIGH
@@ -18,6 +19,7 @@ const SpcOutlook: React.FC = () => {
   const [spcTestRaw, setSpcTestRaw] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!ENABLE_SPC) return;
     if (overrideActive.current) return;
     if (!location) return;
     const { latitude: lat, longitude: lon } = location;
