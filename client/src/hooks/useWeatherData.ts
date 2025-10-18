@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { cachedJson } from '../utils/cachedFetch';
 import { useApp } from '../contexts/AppContext';
 
 interface WeatherData {
@@ -54,29 +55,7 @@ export const useWeatherData = () => {
         const pointUrl = baseUrl + pointPath;
         console.log('Fetching weather data from:', pointUrl);
 
-        const pointResponse = await fetch(pointUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!pointResponse.ok) {
-          const text = await pointResponse.text();
-          console.error('API response not OK:', pointResponse.status, text);
-          throw new Error(`Failed to fetch location data: ${pointResponse.status}`);
-        }
-
-        // Check if response is JSON (Weather.gov returns application/geo+json)
-        const contentType = pointResponse.headers.get('content-type');
-        if (!contentType || (!contentType.includes('application/json') && !contentType.includes('application/geo+json'))) {
-          const text = await pointResponse.text();
-          console.error('Response is not JSON:', contentType, text.substring(0, 500));
-          throw new Error('API returned non-JSON response');
-        }
-
-        const pointData = await pointResponse.json();
+        const pointData = await cachedJson<any>(pointUrl, 30 * 60 * 1000);
         console.log('Point data received:', pointData);
 
         if (!pointData.properties) {
@@ -94,14 +73,7 @@ export const useWeatherData = () => {
         // Fetch the list of stations using direct backend URL
         const stationsApiUrl = stationsUrl.replace('https://api.weather.gov', baseUrl + '/api');
         console.log('Fetching stations from:', stationsApiUrl);
-        const stationsResponse = await fetch(stationsApiUrl);
-        if (!stationsResponse.ok) {
-          const errorText = await stationsResponse.text();
-          console.error('Failed to fetch stations:', stationsResponse.status, errorText);
-          throw new Error(`Failed to fetch observation stations: ${stationsResponse.status}`);
-        }
-
-        const stationsData = await stationsResponse.json();
+        const stationsData = await cachedJson<any>(stationsApiUrl, 30 * 60 * 1000);
         const stations = stationsData.features || stationsData.observationStations || [];
 
         if (stations.length === 0) {
@@ -119,30 +91,25 @@ export const useWeatherData = () => {
           const obsUrl = baseUrl ? `${baseUrl}/api/stations/${stationId}/observations/latest` : `/api/stations/${stationId}/observations/latest`;
 
           try {
-            const obsResponse = await fetch(obsUrl);
+            const obsData = await cachedJson<any>(obsUrl, 30 * 60 * 1000);
 
-            if (obsResponse.ok) {
-              const obsData = await obsResponse.json();
-              const props = obsData.properties;
+            const props = obsData.properties;
 
-              setWeatherData({
-                temperature: props.temperature?.value ?
-                  Math.round(props.temperature.value * 9/5 + 32) : undefined,
-                conditions: props.textDescription,
-                humidity: props.relativeHumidity?.value,
-                windSpeed: toMph(props.windSpeed?.value, (props.windSpeed as any)?.unitCode),
-                windDirection: props.windDirection?.value !== null ?
-                  getWindDirection(props.windDirection.value) : undefined,
-                pressure: props.barometricPressure?.value ?
-                  Math.round((props.barometricPressure.value / 100) * 100) / 100 : undefined,
-                visibility: props.visibility?.value ?
-                  Math.round(props.visibility.value / 1609.34) : undefined,
-                icon: props.icon,
-                timestamp: props.timestamp,
-              });
-            } else {
-              console.warn('No observation data available for station:', stationId);
-            }
+            setWeatherData({
+              temperature: props.temperature?.value ?
+                Math.round(props.temperature.value * 9/5 + 32) : undefined,
+              conditions: props.textDescription,
+              humidity: props.relativeHumidity?.value,
+              windSpeed: toMph(props.windSpeed?.value, (props.windSpeed as any)?.unitCode),
+              windDirection: props.windDirection?.value !== null ?
+                getWindDirection(props.windDirection.value) : undefined,
+              pressure: props.barometricPressure?.value ?
+                Math.round((props.barometricPressure.value / 100) * 100) / 100 : undefined,
+              visibility: props.visibility?.value ?
+                Math.round(props.visibility.value / 1609.34) : undefined,
+              icon: props.icon,
+              timestamp: props.timestamp,
+            });
           } catch (obsError) {
             console.warn('Failed to fetch observations from station:', stationId, obsError);
             // Continue without observation data - location is still valid
@@ -157,6 +124,15 @@ export const useWeatherData = () => {
     };
 
     fetchWeatherData();
+
+    // Refresh every 30 minutes
+    const interval = setInterval(() => {
+      fetchWeatherData();
+    }, 30 * 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, [location]);
 
   return { weatherData, loading, error };

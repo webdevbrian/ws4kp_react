@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { cachedJson } from '../utils/cachedFetch';
 import { useApp } from '../contexts/AppContext';
 
 interface Period {
@@ -50,39 +51,21 @@ export const useForecastData = () => {
         const lat = location.latitude.toFixed(4);
         const lon = location.longitude.toFixed(4);
         const pointUrl = `${baseUrl}/api/points/${lat},${lon}`;
-
-        const pointResponse = await fetch(pointUrl);
-        if (!pointResponse.ok) {
-          throw new Error('Failed to fetch location data');
-        }
-
-        const pointData = await pointResponse.json();
+        const pointData = await cachedJson<any>(pointUrl, 30 * 60 * 1000);
         const { gridId, gridX, gridY } = pointData.properties;
 
         // Fetch hourly, daily, and gridpoint time series (for skyCover)
-        const [hourlyResponse, dailyResponse, gridpointResponse] = await Promise.all([
-          fetch(`${baseUrl}/api/gridpoints/${gridId}/${gridX},${gridY}/forecast/hourly`),
-          fetch(`${baseUrl}/api/gridpoints/${gridId}/${gridX},${gridY}/forecast`),
-          fetch(`${baseUrl}/api/gridpoints/${gridId}/${gridX},${gridY}`)
+        const [hourlyJson, dailyJson, gridJson] = await Promise.all([
+          cachedJson<any>(`${baseUrl}/api/gridpoints/${gridId}/${gridX},${gridY}/forecast/hourly`, 30 * 60 * 1000).catch(() => null),
+          cachedJson<any>(`${baseUrl}/api/gridpoints/${gridId}/${gridX},${gridY}/forecast`, 30 * 60 * 1000).catch(() => null),
+          cachedJson<any>(`${baseUrl}/api/gridpoints/${gridId}/${gridX},${gridY}`, 30 * 60 * 1000).catch(() => null),
         ]);
-
-        let hourlyData = null;
-        let dailyData = null;
-
-        if (hourlyResponse.ok) {
-          const hourlyJson = await hourlyResponse.json();
-          hourlyData = hourlyJson.properties?.periods || [];
-        }
-
-        if (dailyResponse.ok) {
-          const dailyJson = await dailyResponse.json();
-          dailyData = dailyJson.properties?.periods || [];
-        }
+        let hourlyData = hourlyJson?.properties?.periods || [];
+        let dailyData = dailyJson?.properties?.periods || [];
 
         // Try to enrich hourly data with cloud cover (skyCover from gridpoints)
-        if (gridpointResponse.ok && Array.isArray(hourlyData) && hourlyData.length > 0) {
+        if (gridJson && Array.isArray(hourlyData) && hourlyData.length > 0) {
           try {
-            const gridJson = await gridpointResponse.json();
             const skyCover = gridJson?.properties?.skyCover?.values || [];
 
             // Minimal ISO8601 duration parser for PT#H / PT#M
@@ -125,6 +108,15 @@ export const useForecastData = () => {
     };
 
     fetchForecastData();
+
+    // Refresh every 30 minutes
+    const interval = setInterval(() => {
+      fetchForecastData();
+    }, 30 * 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, [location]);
 
   return { forecastData, loading, error };

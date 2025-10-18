@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { cachedJson } from '../utils/cachedFetch';
 import { useApp } from '../contexts/AppContext';
 
 interface StationObservation {
@@ -51,23 +52,12 @@ export const useNearbyStations = () => {
         const lon = location.longitude.toFixed(4);
         const pointUrl = `${baseUrl}/api/points/${lat},${lon}`;
 
-        const pointResponse = await fetch(pointUrl);
-        if (!pointResponse.ok) {
-          throw new Error('Failed to fetch location data');
-        }
-
-        const pointData = await pointResponse.json();
+        const pointData = await cachedJson<any>(pointUrl, 30 * 60 * 1000);
         const stationsUrl = pointData.properties.observationStations;
 
         // Fetch the list of stations
         const stationsApiUrl = stationsUrl.replace('https://api.weather.gov', '/api');
-        const stationsResponse = await fetch(`${baseUrl}${stationsApiUrl}`);
-
-        if (!stationsResponse.ok) {
-          throw new Error('Failed to fetch stations');
-        }
-
-        const stationsData = await stationsResponse.json();
+        const stationsData = await cachedJson<any>(`${baseUrl}${stationsApiUrl}`, 30 * 60 * 1000);
         const stationsList = stationsData.features || [];
 
         // Fetch observations for up to 5 nearest stations
@@ -79,29 +69,26 @@ export const useNearbyStations = () => {
 
           try {
             const obsUrl = `${baseUrl}/api/stations/${stationId}/observations/latest`;
-            const obsResponse = await fetch(obsUrl);
+            const obsData = await cachedJson<any>(obsUrl, 30 * 60 * 1000);
 
-            if (obsResponse.ok) {
-              const obsData = await obsResponse.json();
-              const props = obsData.properties;
+            const props = obsData.properties;
 
-              const mph = toMph(props.windSpeed?.value, (props.windSpeed as any)?.unitCode);
-              nearbyStations.push({
-                stationId,
-                name: station.properties.name,
-                distance: Math.round(station.properties.distance?.value / 1609.34) || 0, // Convert to miles
-                temperature: props.temperature?.value ?
-                  Math.round(props.temperature.value * 9/5 + 32) : undefined,
-                conditions: props.textDescription,
-                windSpeed: mph,
-                windDirection: props.windDirection?.value !== null ?
-                  getWindDirection(props.windDirection.value) : undefined,
-                humidity: props.relativeHumidity?.value,
-                pressure: props.barometricPressure?.value ?
-                  Math.round((props.barometricPressure.value / 100) * 100) / 100 : undefined,
-                timestamp: props.timestamp,
-              });
-            }
+            const mph = toMph(props.windSpeed?.value, (props.windSpeed as any)?.unitCode);
+            nearbyStations.push({
+              stationId,
+              name: station.properties.name,
+              distance: Math.round(station.properties.distance?.value / 1609.34) || 0, // Convert to miles
+              temperature: props.temperature?.value ?
+                Math.round(props.temperature.value * 9/5 + 32) : undefined,
+              conditions: props.textDescription,
+              windSpeed: mph,
+              windDirection: props.windDirection?.value !== null ?
+                getWindDirection(props.windDirection.value) : undefined,
+              humidity: props.relativeHumidity?.value,
+              pressure: props.barometricPressure?.value ?
+                Math.round((props.barometricPressure.value / 100) * 100) / 100 : undefined,
+              timestamp: props.timestamp,
+            });
           } catch (err) {
             console.warn(`Failed to fetch observations for station ${stationId}`);
           }
@@ -117,6 +104,15 @@ export const useNearbyStations = () => {
     };
 
     fetchNearbyStations();
+
+    // Refresh every 30 minutes
+    const interval = setInterval(() => {
+      fetchNearbyStations();
+    }, 30 * 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, [location]);
 
   return { stations, loading, error };

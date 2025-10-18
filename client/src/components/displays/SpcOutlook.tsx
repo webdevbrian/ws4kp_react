@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { cachedJson } from '../../utils/cachedFetch';
 import { useApp } from '../../contexts/AppContext';
 import { useForecastData } from '../../hooks/useForecastData';
 import HeaderBar from '../HeaderBar';
@@ -69,11 +70,9 @@ const SpcOutlook: React.FC = () => {
       return 0;
     };
     const fetchDay = async (day: 1 | 2 | 3) => {
-      const url = `https://mesonet.agron.iastate.edu/geojson/spc_outlook.py?day=${day}&cat=categorical`;
+      const url = `http://localhost:8080/mesonet/geojson/spc_outlook.py?day=${day}&cat=categorical`;
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('bad');
-        const gj = await res.json();
+        const gj = await cachedJson<any>(url, 30 * 60 * 1000);
         let best = 0;
         for (const f of gj.features || []) {
           const idx = visitFeature(f);

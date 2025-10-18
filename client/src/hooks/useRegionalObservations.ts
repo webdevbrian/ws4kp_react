@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { cachedJson } from '../utils/cachedFetch';
 import { useApp } from '../contexts/AppContext';
 
 export type RegionalObs = {
@@ -29,35 +30,9 @@ export const useRegionalObservations = () => {
         const lat = location.latitude;
         const lon = location.longitude;
 
-        // Primary: get stations by bbox around the user
-        const south = (lat - 5).toFixed(3);
-        const north = (lat + 5).toFixed(3);
-        const west = (lon - 6).toFixed(3);
-        const east = (lon + 6).toFixed(3);
-        let feats: any[] = [];
-        try {
-          const bboxRes = await fetch(`${baseUrl}/api/stations?bbox=${west},${south},${east},${north}`);
-          if (bboxRes.ok) {
-            const gj = await bboxRes.json();
-            feats = gj.features || [];
-          }
-        } catch {}
-
-        // Fallback: NWS points->observationStations
-        if (!feats || feats.length === 0) {
-          const plat = lat.toFixed(4);
-          const plon = lon.toFixed(4);
-          const pointUrl = `${baseUrl}/api/points/${plat},${plon}`;
-          const pointRes = await fetch(pointUrl);
-          if (!pointRes.ok) throw new Error('point');
-          const pointData = await pointRes.json();
-          const stationsUrl: string = pointData.properties.observationStations;
-          const stationsApiUrl = stationsUrl.replace('https://api.weather.gov', '/api');
-          const stationsRes = await fetch(`${baseUrl}${stationsApiUrl}`);
-          if (!stationsRes.ok) throw new Error('stations');
-          const stationsData = await stationsRes.json();
-          feats = stationsData.features || [];
-        }
+        // Use static stations list to avoid bbox and reduce external calls
+        const stationsList = await cachedJson<any>(`${baseUrl}/data/stations.json`, 30 * 60 * 1000);
+        const feats: any[] = stationsList.features || [];
 
         const take = Math.min(40, feats.length);
         const seen = new Set<string>();
@@ -73,9 +48,8 @@ export const useRegionalObservations = () => {
             if (!id || seen.has(id)) return;
             seen.add(id);
             try {
-              const o = await fetch(`${baseUrl}/api/stations/${id}/observations/latest`);
-              if (!o.ok) return;
-              const j = await o.json();
+              const j = await cachedJson<any>(`${baseUrl}/api/stations/${id}/observations/latest`, 30 * 60 * 1000).catch(() => null);
+              if (!j) return;
               const props = j.properties || {};
               out.push({
                 id,
@@ -99,7 +73,9 @@ export const useRegionalObservations = () => {
     };
 
     run();
-    return () => { cancelled = true; };
+    // Refresh every 30 minutes
+    const interval = setInterval(run, 30 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [location]);
 
   return { data, loading, error };
