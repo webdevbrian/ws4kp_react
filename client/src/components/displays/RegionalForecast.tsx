@@ -23,8 +23,8 @@ const RegionalForecast: React.FC = () => {
 	const titleBottom = 'Observations';
 
 	const baseMapSrc = useMemo(() => {
-		if (region === 'alaska') return '/images/maps/basemap-alaska.webp';
-		if (region === 'hawaii') return '/images/maps/basemap-hawaii.webp';
+		if (region === 'alaska') return '/images/maps/radar-alaska.png';
+		if (region === 'hawaii') return '/images/maps/radar-hawaii.png';
 		return '/images/maps/basemap.webp';
 	}, [region]);
 
