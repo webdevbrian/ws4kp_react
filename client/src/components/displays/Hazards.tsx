@@ -18,16 +18,6 @@ const Hazards: React.FC = () => {
     });
   };
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity?.toLowerCase()) {
-      case 'extreme': return '#FF0000';
-      case 'severe': return '#FFA500';
-      case 'moderate': return '#FFFF00';
-      case 'minor': return '#00FF00';
-      default: return '#FFFFFF';
-    }
-  };
-
   return (
     <div className="display hazards-display">
       <HeaderBar titleLines={["Weather", "Hazards"]} />
