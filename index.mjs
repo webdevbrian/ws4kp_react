@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import { readFile } from 'fs/promises';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './swagger.config.mjs';
 import {
 	weatherProxy, radarProxy, outlookProxy, mesonetProxy, forecastProxy,
 } from './proxy/handlers.mjs';
@@ -16,9 +18,13 @@ const stationInfo = JSON.parse(await readFile('./datagenerators/output/stations.
 const app = express();
 const port = process.env.WS4KP_PORT ?? 8080;
 
-// CORS middleware - allow requests from the Vite dev server
+// CORS middleware - allow requests from the Vite dev server and preview server
 app.use((req, res, next) => {
-	res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+	const origin = req.headers.origin;
+	// Allow both dev server (3000) and preview server (4173) origins
+	if (origin === 'http://localhost:3000' || origin === 'http://localhost:4173') {
+		res.setHeader('Access-Control-Allow-Origin', origin);
+	}
 	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 	res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 	res.setHeader('X-Weatherstar', 'true');
@@ -153,12 +159,19 @@ Object.entries(dataEndpoints).forEach(([name, data]) => {
 app.use('/geoip', geoip);
 app.get('/api-info', apiInfo);
 
+// Swagger API documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+	customCss: '.swagger-ui .topbar { display: none }',
+	customSiteTitle: 'WeatherStar 4000+ API Documentation',
+}));
+
 // Root route - inform users to use the React dev server
 app.get('/', (req, res) => {
 	res.json({
 		message: 'WeatherStar 4000+ API Server',
 		version,
 		note: 'This is the API backend. To access the application, run "npm run dev" and visit http://localhost:3000',
+		documentation: 'Visit /api-docs for interactive API documentation',
 		endpoints: {
 			api: '/api/*',
 			data: '/data/[travelcities|regionalcities|stations].json',
@@ -167,7 +180,8 @@ app.get('/', (req, res) => {
 			spc: '/spc/*',
 			mesonet: '/mesonet/*',
 			forecast: '/forecast/*',
-			playlist: '/playlist.json'
+			playlist: '/playlist.json',
+			docs: '/api-docs'
 		}
 	});
 });

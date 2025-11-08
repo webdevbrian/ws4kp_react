@@ -26,10 +26,10 @@
 	},
 	"homepage": "https://github.com/netbymatt/ws4kp#readme",
 	"devDependencies": {
+		"@types/luxon": "^3.0.0",
 		"@types/node": "^20.0.0",
 		"@types/react": "^18.2.0",
 		"@types/react-dom": "^18.2.0",
-		"@types/luxon": "^3.0.0",
 		"@typescript-eslint/eslint-plugin": "^6.0.0",
 		"@typescript-eslint/parser": "^6.0.0",
 		"@vitejs/plugin-react": "^4.2.0",
@@ -52,6 +52,8 @@
 		"react-dom": "^18.2.0",
 		"react-router-dom": "^6.20.0",
 		"suncalc": "^1.8.0",
+		"swagger-jsdoc": "^6.2.8",
+		"swagger-ui-express": "^5.0.1",
 		"swiped-events": "^1.1.4"
 	}
 }

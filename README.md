@@ -73,14 +73,39 @@ Access the app at http://localhost:3000. The backend at port 8080 provides proxi
 npm run build   # builds static assets into /dist via Vite
 ```
 
-You can serve the built assets with any static web server. If you need the caching proxy (recommended), run the Express server separately and configure the frontend to call it. The included `index.mjs` exposes:
+You can serve the built assets with any static web server. If you need the caching proxy (recommended), run the Express server separately and configure the frontend to call it.
 
-- `/api/*` (Weather.gov proxy)
-- `/spc/*` (SPC proxy)
-- `/radar/*` (radar proxy)
-- `/mesonet/*` (mesonet proxy)
-- `/forecast/*` (legacy forecast proxy)
-- `/playlist.json` (when server mode is used with music)
+### API Documentation
+
+The backend server provides a comprehensive REST API with interactive documentation available at:
+
+**http://localhost:8080/api-docs**
+
+The API includes the following endpoint groups:
+
+#### System Endpoints
+- `/` - Server information and available endpoints
+- `/api-info` - API version and configuration details
+- `/api-docs` - Interactive Swagger/OpenAPI documentation
+
+#### Data Endpoints
+- `/data/travelcities.json` - Travel cities with coordinates
+- `/data/regionalcities.json` - Regional cities with coordinates
+- `/data/stations.json` - Weather station information
+
+#### Weather Data Proxies (with caching)
+- `/api/*` - Weather.gov API proxy
+- `/spc/*` - Storm Prediction Center proxy
+- `/radar/*` - Radar imagery proxy
+- `/mesonet/*` - Mesonet data proxy
+- `/forecast/*` - Forecast data proxy
+
+#### Other Endpoints
+- `/geoip` - Mock GeoIP location data
+- `/playlist.json` - Display playlist configuration
+- `/cache/*` (DELETE) - Clear specific cache entries
+
+All proxied endpoints include intelligent caching to reduce load on upstream services and improve performance. The cache can be managed via the DELETE endpoints.
 
 ### Key Differences
 
