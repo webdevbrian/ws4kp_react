@@ -5,6 +5,7 @@ import LocationInput from './components/LocationInput';
 import NavigationControls from './components/NavigationControls';
 import MusicPlayer from './components/MusicPlayer';
 import Settings from './components/Settings';
+import AlertsMonitor from './components/AlertsMonitor';
 import { AppProvider } from './contexts/AppContext';
 import { NavigationProvider } from './contexts/NavigationContext';
 import { parseQueryString } from './utils/share';
@@ -77,6 +78,7 @@ const App: React.FC = () => {
               {version}
             </div>
 
+            <AlertsMonitor />
             <WeatherDisplay version={version} />
             <MusicPlayer />
             <NavigationControls />

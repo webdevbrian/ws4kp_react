@@ -43,8 +43,8 @@ export const useWeatherData = () => {
       setLoading(true);
       setError(null);
 
-      // Use direct backend URL to bypass Vite proxy issues
-      const baseUrl = 'http://localhost:8080';
+      // Use relative URLs to work with both dev server and preview
+      const baseUrl = '';
 
       try {
         // First, get the grid point for the location

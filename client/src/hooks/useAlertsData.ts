@@ -30,7 +30,8 @@ export const useAlertsData = () => {
       setLoading(true);
       setError(null);
 
-      const baseUrl = 'http://localhost:8080';
+      // Use relative URL to work with both dev and preview servers
+      const baseUrl = '';
 
       try {
         // Get alerts for the point

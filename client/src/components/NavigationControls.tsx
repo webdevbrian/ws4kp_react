@@ -89,13 +89,13 @@ const NavigationControls: React.FC = () => {
         Current: {currentDisplay}
       </div>
       <div id="divTwcBottomLeft">
-        <img
+        {/* <img
           id="NavigateMenu"
           className="navButton"
           src="/images/nav/ic_menu_white_24dp_2x.png"
           title="Menu"
           onClick={handleMenuClick}
-        />
+        /> */}
         <img
           id="NavigatePrevious"
           className="navButton"

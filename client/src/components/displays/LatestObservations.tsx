@@ -15,6 +15,8 @@ const LatestObservations: React.FC = () => {
       .replace(/\bPartly\b/gi, 'P')
       .replace(/\bPartially\b/gi, 'P')
       .replace(/\bPart\b/gi, 'P')
+      .replace(/\bLight Rain\b/gi, 'L Rain')
+      .replace(/\bHeavy Rain\b/gi, 'H Rain')
       .replace(/\bThunderstorms\b/gi, 'Tstorms')
       .replace(/\bThunderstorm\b/gi, 'Tstorm')
       .replace(/\s+/g, ' ')

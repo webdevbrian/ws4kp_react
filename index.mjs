@@ -18,11 +18,11 @@ const stationInfo = JSON.parse(await readFile('./datagenerators/output/stations.
 const app = express();
 const port = process.env.WS4KP_PORT ?? 8080;
 
-// CORS middleware - allow requests from the Vite dev server and preview server
+// CORS middleware - allow requests from any localhost port for development
 app.use((req, res, next) => {
 	const origin = req.headers.origin;
-	// Allow both dev server (3000) and preview server (4173) origins
-	if (origin === 'http://localhost:3000' || origin === 'http://localhost:4173') {
+	// Allow any localhost origin (dev server, preview server, or any other local port)
+	if (origin && origin.startsWith('http://localhost:')) {
 		res.setHeader('Access-Control-Allow-Origin', origin);
 	}
 	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

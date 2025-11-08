@@ -6,7 +6,6 @@ import { useApp } from '../contexts/AppContext';
 // - serves files from /music (already exposed by Express)
 // - starts/stops with AppContext.mediaEnabled
 // - updates AppContext.musicTrack with the current filename
-const API_BASE = 'http://localhost:8080';
 
 interface PlaylistResponse {
   availableFiles: string[];
@@ -29,14 +28,14 @@ const MusicPlayer: React.FC = () => {
   const src = useMemo(() => {
     if (!tracks.length) return '';
     const file = tracks[idx % tracks.length];
-    return `${API_BASE}/music/${file}`;
+    return `/music/${file}`;
   }, [tracks, idx]);
 
   useEffect(() => {
     // Load playlist from server
     const load = async () => {
       try {
-        const res = await fetch(`${API_BASE}/playlist.json`);
+        const res = await fetch('/playlist.json');
         if (!res.ok) throw new Error(`Playlist error ${res.status}`);
         const data: PlaylistResponse = await res.json();
         if (Array.isArray(data.availableFiles) && data.availableFiles.length) {

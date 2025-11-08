@@ -7,6 +7,8 @@ interface NavigationContextType {
   setCurrentDisplay: (display: string) => void;
   displays: string[];
   setDisplays: (displays: string[]) => void;
+  hasActiveAlerts: boolean;
+  setHasActiveAlerts: (value: boolean) => void;
   next: () => void;
   previous: () => void;
   play: () => void;
@@ -61,18 +63,22 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       return Array.isArray(parsed) && parsed.length ? parsed : defaultDisplays;
     } catch { return defaultDisplays; }
   });
+  const [hasActiveAlerts, setHasActiveAlerts] = useState<boolean>(false);
+
+  // Filter displays based on whether hazards should be shown
+  const activeDisplays = displays.filter(d => d !== 'hazards' || hasActiveAlerts);
 
   const next = useCallback(() => {
-    const currentIndex = displays.indexOf(currentDisplay);
-    const nextIndex = (currentIndex + 1) % displays.length;
-    setCurrentDisplay(displays[nextIndex]);
-  }, [currentDisplay, displays]);
+    const currentIndex = activeDisplays.indexOf(currentDisplay);
+    const nextIndex = (currentIndex + 1) % activeDisplays.length;
+    setCurrentDisplay(activeDisplays[nextIndex]);
+  }, [currentDisplay, activeDisplays]);
 
   const previous = useCallback(() => {
-    const currentIndex = displays.indexOf(currentDisplay);
-    const previousIndex = currentIndex === 0 ? displays.length - 1 : currentIndex - 1;
-    setCurrentDisplay(displays[previousIndex]);
-  }, [currentDisplay, displays]);
+    const currentIndex = activeDisplays.indexOf(currentDisplay);
+    const previousIndex = currentIndex === 0 ? activeDisplays.length - 1 : currentIndex - 1;
+    setCurrentDisplay(activeDisplays[previousIndex]);
+  }, [currentDisplay, activeDisplays]);
 
   const play = useCallback(() => {
     setIsPlaying(true);
@@ -110,10 +116,10 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
 
   // Keep currentDisplay valid if the list changes or excludes the current one
   useEffect(() => {
-    if (!displays.includes(currentDisplay)) {
-      setCurrentDisplay(displays[0] || 'current-weather');
+    if (!activeDisplays.includes(currentDisplay)) {
+      setCurrentDisplay(activeDisplays[0] || 'current-weather');
     }
-  }, [displays]);
+  }, [activeDisplays, currentDisplay]);
 
   const value = {
     isPlaying,
@@ -122,6 +128,8 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     setCurrentDisplay,
     displays,
     setDisplays,
+    hasActiveAlerts,
+    setHasActiveAlerts,
     next,
     previous,
     play,

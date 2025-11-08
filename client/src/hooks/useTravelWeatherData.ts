@@ -30,7 +30,7 @@ export const useTravelWeatherData = (cities: TravelCity[]) => {
             // First get the gridpoint data
             const lat = city.Latitude.toFixed(4);
             const lon = city.Longitude.toFixed(4);
-            const pointsUrl = `http://localhost:8080/api/points/${lat},${lon}`;
+            const pointsUrl = `/api/points/${lat},${lon}`;
 
             const pointsResponse = await fetch(pointsUrl);
             if (!pointsResponse.ok) {
@@ -47,11 +47,11 @@ export const useTravelWeatherData = (cities: TravelCity[]) => {
             const observationStationsUrl = pointsData.properties.observationStations;
 
             // Fetch forecast data for high/low temperatures
-            const forecastResponse = await fetch(forecastUrl.replace('https://api.weather.gov', 'http://localhost:8080/api'));
+            const forecastResponse = await fetch(forecastUrl.replace('https://api.weather.gov', '/api'));
             const forecastData = forecastResponse.ok ? await forecastResponse.json() : null;
 
             // Fetch current observation
-            const stationsResponse = await fetch(observationStationsUrl.replace('https://api.weather.gov', 'http://localhost:8080/api'));
+            const stationsResponse = await fetch(observationStationsUrl.replace('https://api.weather.gov', '/api'));
             const stationsData = stationsResponse.ok ? await stationsResponse.json() : null;
 
             let currentTemp: number | undefined;
@@ -60,7 +60,7 @@ export const useTravelWeatherData = (cities: TravelCity[]) => {
 
             if (stationsData && stationsData.features && stationsData.features.length > 0) {
               const stationId = stationsData.features[0].properties.stationIdentifier;
-              const observationUrl = `http://localhost:8080/api/stations/${stationId}/observations/latest`;
+              const observationUrl = `/api/stations/${stationId}/observations/latest`;
 
               try {
                 const observationResponse = await fetch(observationUrl);
@@ -72,7 +72,12 @@ export const useTravelWeatherData = (cities: TravelCity[]) => {
                     currentTemp = Math.round(props.temperature.value * 9/5 + 32);
                   }
 
+                  // Shorten conditions text for display
                   conditions = props.textDescription;
+                  if (conditions) {
+                    // Remove "L Rain and " prefix when followed by Fog/Mist
+                    conditions = conditions.replace(/^L Rain and (Fog\/Mist)/i, '$1');
+                  }
                   icon = props.icon ? props.icon.split(',')[0].split('/').pop()?.replace('?size=medium', '') : undefined;
                 }
               } catch (err) {
