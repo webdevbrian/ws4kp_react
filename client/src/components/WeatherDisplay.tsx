@@ -23,9 +23,6 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ version }) => {
   const { currentDisplay } = useNavigation();
   const { location } = useApp();
 
-  // Log current display for debugging
-  console.log('Current display:', currentDisplay);
-
   if (!location) {
     return (
       <div id="divTwc">

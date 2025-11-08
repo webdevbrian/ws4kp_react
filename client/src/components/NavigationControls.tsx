@@ -3,7 +3,7 @@ import { useNavigation } from '../contexts/NavigationContext';
 import { useApp } from '../contexts/AppContext';
 
 const NavigationControls: React.FC = () => {
-  const { isPlaying, currentDisplay, next, previous, play, pause, refresh } = useNavigation();
+  const { isPlaying, next, previous, play, pause, refresh } = useNavigation();
   const {
     isFullscreen,
     setIsFullscreen,
@@ -78,9 +78,6 @@ const NavigationControls: React.FC = () => {
 
   return (
     <div id="divTwcBottom">
-      <div style={{ position: 'absolute', top: '-20px', left: '10px', color: 'white', fontSize: '12px' }}>
-        Current: {currentDisplay}
-      </div>
       <div id="divTwcBottomLeft">
         {/* <img
           id="NavigateMenu"

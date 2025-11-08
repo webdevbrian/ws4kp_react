@@ -116,10 +116,13 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
 
   // Keep currentDisplay valid if the list changes or excludes the current one
   useEffect(() => {
-    if (!activeDisplays.includes(currentDisplay)) {
-      setCurrentDisplay(activeDisplays[0] || 'current-weather');
-    }
-  }, [activeDisplays, currentDisplay]);
+    setCurrentDisplay(prev => {
+      if (!activeDisplays.includes(prev)) {
+        return activeDisplays[0] || 'current-weather';
+      }
+      return prev;
+    });
+  }, [activeDisplays]);
 
   const value = {
     isPlaying,
