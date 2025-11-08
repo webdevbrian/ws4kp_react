@@ -14,13 +14,6 @@ const NavigationControls: React.FC = () => {
     setMediaEnabled
   } = useApp();
 
-  const handleMenuClick = () => {
-    const wrapper = document.querySelector('.content-wrapper');
-    if (wrapper) {
-      wrapper.classList.toggle('show');
-    }
-  };
-
   const handlePlayPauseClick = () => {
     if (isPlaying) {
       pause();
