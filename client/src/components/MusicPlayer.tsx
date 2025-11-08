@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+import YouTubePlayer from './YouTubePlayer';
 
 // Simple background music player that:
 // - fetches /playlist.json from the API server
@@ -12,7 +13,7 @@ interface PlaylistResponse {
 }
 
 const MusicPlayer: React.FC = () => {
-  const { mediaEnabled, setMediaAvailable, setMusicTrack } = useApp();
+  const { mediaEnabled, setMediaAvailable, setMusicTrack, youtubeEnabled, youtubeUrl, youtubeRandomSeek } = useApp();
   const [tracks, setTracks] = useState<string[]>([]);
   const [idx, setIdx] = useState<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -67,12 +68,16 @@ const MusicPlayer: React.FC = () => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (!src) return;
+    if (!src || youtubeEnabled) {
+      audio.pause();
+      return;
+    }
+
     audio.src = src;
     setMusicTrack(src.split('/').pop() || '');
 
     const playIfEnabled = async () => {
-      if (mediaEnabled) {
+      if (mediaEnabled && !youtubeEnabled) {
         try {
           await audio.play();
         } catch (e) {
@@ -85,17 +90,46 @@ const MusicPlayer: React.FC = () => {
     };
 
     playIfEnabled();
-  }, [src, mediaEnabled, setMusicTrack]);
+  }, [src, mediaEnabled, youtubeEnabled, setMusicTrack]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (mediaEnabled) {
+    if (mediaEnabled && !youtubeEnabled) {
       audio.play().catch(() => {/* ignore */});
     } else {
       audio.pause();
     }
-  }, [mediaEnabled]);
+  }, [mediaEnabled, youtubeEnabled]);
+
+  // Extract YouTube video ID from URL
+  const getYouTubeVideoId = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.hostname.includes('youtube.com')) {
+        return urlObj.searchParams.get('v') || '';
+      } else if (urlObj.hostname.includes('youtu.be')) {
+        return urlObj.pathname.slice(1);
+      }
+    } catch {
+      // If not a valid URL, assume it's already a video ID
+      return url;
+    }
+    return '';
+  };
+
+  const youtubeVideoId = getYouTubeVideoId(youtubeUrl);
+
+  // Render YouTube player if enabled, otherwise nothing
+  if (youtubeEnabled && youtubeVideoId) {
+    return (
+      <YouTubePlayer
+        videoId={youtubeVideoId}
+        randomSeek={youtubeRandomSeek}
+        enabled={mediaEnabled && youtubeEnabled}
+      />
+    );
+  }
 
   // No UI; background player only
   return null;

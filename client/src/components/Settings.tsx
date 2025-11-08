@@ -8,9 +8,19 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ version }) => {
-  const { location, musicTrack } = useApp();
+  const {
+    location,
+    musicTrack,
+    youtubeEnabled,
+    setYoutubeEnabled,
+    youtubeUrl,
+    setYoutubeUrl,
+    youtubeRandomSeek,
+    setYoutubeRandomSeek
+  } = useApp();
   const { displays, setDisplays } = useNavigation();
   const [linkCopied, setLinkCopied] = useState(false);
+  const [tempYoutubeUrl, setTempYoutubeUrl] = useState(youtubeUrl);
 
   const handleDisplayToggle = (display: string) => {
     if (displays.includes(display)) {
@@ -30,6 +40,10 @@ const Settings: React.FC<SettingsProps> = ({ version }) => {
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 3000);
     });
+  };
+
+  const handleSetYoutubeUrl = () => {
+    setYoutubeUrl(tempYoutubeUrl);
   };
 
   return (
@@ -70,6 +84,45 @@ const Settings: React.FC<SettingsProps> = ({ version }) => {
 
       <div className="heading">Settings</div>
       <div id="settings">
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '10px' }}>
+            <input
+              type="checkbox"
+              checked={youtubeEnabled}
+              onChange={(e) => setYoutubeEnabled(e.target.checked)}
+            />
+            Use YouTube for background music
+          </label>
+
+          {youtubeEnabled && (
+            <>
+              <div style={{ marginLeft: '20px', marginBottom: '10px' }}>
+                <label style={{ display: 'block', marginBottom: '5px' }}>
+                  YouTube URL:
+                </label>
+                <input
+                  type="text"
+                  value={tempYoutubeUrl}
+                  onChange={(e) => setTempYoutubeUrl(e.target.value)}
+                  style={{ width: '300px', marginRight: '10px' }}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+                <button onClick={handleSetYoutubeUrl}>Set</button>
+              </div>
+
+              <div style={{ marginLeft: '20px' }}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={youtubeRandomSeek}
+                    onChange={(e) => setYoutubeRandomSeek(e.target.checked)}
+                  />
+                  Start at random position
+                </label>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="heading">Sharing</div>

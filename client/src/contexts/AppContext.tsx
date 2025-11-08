@@ -27,6 +27,12 @@ interface AppContextType {
   setMediaEnabled: (value: boolean) => void;
   musicTrack: string;
   setMusicTrack: (value: string) => void;
+  youtubeEnabled: boolean;
+  setYoutubeEnabled: (value: boolean) => void;
+  youtubeUrl: string;
+  setYoutubeUrl: (value: string) => void;
+  youtubeRandomSeek: boolean;
+  setYoutubeRandomSeek: (value: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -64,6 +70,23 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       return localStorage.getItem('app.musicTrack') || 'Not playing';
     } catch { return 'Not playing'; }
   });
+  const [youtubeEnabled, setYoutubeEnabled] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('app.youtubeEnabled');
+      return v === '1' || v === 'true';
+    } catch { return false; }
+  });
+  const [youtubeUrl, setYoutubeUrl] = useState<string>(() => {
+    try {
+      return localStorage.getItem('app.youtubeUrl') || 'https://www.youtube.com/watch?v=j-prqnvaDgA';
+    } catch { return 'https://www.youtube.com/watch?v=j-prqnvaDgA'; }
+  });
+  const [youtubeRandomSeek, setYoutubeRandomSeek] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('app.youtubeRandomSeek');
+      return v === '1' || v === 'true';
+    } catch { return false; }
+  });
 
   const serverAvailable = window.WS4KP_SERVER_AVAILABLE || false;
 
@@ -82,6 +105,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try { localStorage.setItem('app.musicTrack', musicTrack || ''); } catch { }
   }, [musicTrack]);
 
+  useEffect(() => {
+    try { localStorage.setItem('app.youtubeEnabled', youtubeEnabled ? '1' : '0'); } catch { }
+  }, [youtubeEnabled]);
+
+  useEffect(() => {
+    try { localStorage.setItem('app.youtubeUrl', youtubeUrl || ''); } catch { }
+  }, [youtubeUrl]);
+
+  useEffect(() => {
+    try { localStorage.setItem('app.youtubeRandomSeek', youtubeRandomSeek ? '1' : '0'); } catch { }
+  }, [youtubeRandomSeek]);
+
   const value = {
     location,
     setLocation,
@@ -96,6 +131,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setMediaEnabled,
     musicTrack,
     setMusicTrack,
+    youtubeEnabled,
+    setYoutubeEnabled,
+    youtubeUrl,
+    setYoutubeUrl,
+    youtubeRandomSeek,
+    setYoutubeRandomSeek,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
