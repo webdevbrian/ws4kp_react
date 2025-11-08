@@ -16,6 +16,8 @@
 
 	.forecasts {
 		position: relative;
+		transition: transform 0.1s linear;
+		will-change: transform;
 	}
 
 	.forecast {

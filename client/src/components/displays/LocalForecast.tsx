@@ -11,10 +11,8 @@ const LocalForecast: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const RAF = useRef<number | null>(null);
-  const state = useRef<'idle' | 'scrolling' | 'pause-bottom'>('idle');
-  const lastTs = useRef<number | null>(null);
-  const yRef = useRef<number>(0);
+  const animationRef = useRef<number | null>(null);
+  const scrollPositionRef = useRef<number>(0);
 
   const toCardinal = (dir?: string) => {
     const d = (dir || '').toUpperCase();
@@ -50,59 +48,84 @@ const LocalForecast: React.FC = () => {
 
   const paragraph = useMemo(() => sentences.join(' '), [sentences]);
 
-  // Auto-scroll logic (translateY)
+  // Auto-scroll logic
   useEffect(() => {
-    const el = containerRef.current; const inner = contentRef.current;
-    if (!el || !inner) return;
-    let startTimer: any; let pauseTimer: any;
-    const SPEED_PX_PER_SEC = 12; // slow, readable
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content || !paragraph) return;
 
-    // Ensure initial transform
-    inner.style.willChange = 'transform';
-    inner.style.transform = 'translateY(0px)';
+    let scrollTimeout: NodeJS.Timeout;
+    let pauseAtBottomTimeout: NodeJS.Timeout;
+    let pauseAtTopTimeout: NodeJS.Timeout;
+    let lastTimestamp: number | null = null;
 
-    const STEP = (ts: number) => {
-      if (!el || !inner) return;
-      if (state.current !== 'scrolling') { RAF.current = requestAnimationFrame(STEP); return; }
-      const max = Math.max(0, inner.scrollHeight - el.clientHeight);
-      if (max <= 0) { // No scrolling needed
-        state.current = 'idle';
+    const SCROLL_SPEED = 30; // pixels per second
+    const INITIAL_DELAY = 2000; // 2 seconds
+    const BOTTOM_PAUSE = 10000; // 10 seconds
+    const TOP_PAUSE = 2000; // 2 seconds
+
+    const startScrolling = () => {
+      const containerHeight = container.offsetHeight;
+      const contentHeight = content.offsetHeight;
+      const scrollDistance = contentHeight - containerHeight;
+
+      // Only scroll if content overflows
+      if (scrollDistance <= 0) {
         return;
       }
-      const prev = lastTs.current ?? ts;
-      const dt = Math.max(0, ts - prev) / 1000; // seconds
-      lastTs.current = ts;
-      const delta = SPEED_PX_PER_SEC * dt;
-      const next = yRef.current + delta;
-      if (next >= max) {
-        yRef.current = max;
-        inner.style.transform = `translateY(${-yRef.current}px)`;
-        state.current = 'pause-bottom';
-        pauseTimer = setTimeout(() => {
-          yRef.current = 0;
-          inner.style.transform = 'translateY(0px)';
-          lastTs.current = null;
-          // Wait 2s after resetting to the top before resuming
-          state.current = 'idle';
-          startTimer = setTimeout(() => { state.current = 'scrolling'; }, 2000);
-        }, 10000);
-      } else {
-        yRef.current = next;
-        inner.style.transform = `translateY(${-yRef.current}px)`;
-      }
-      RAF.current = requestAnimationFrame(STEP);
+
+      scrollPositionRef.current = 0;
+
+      const animate = (timestamp: number) => {
+        if (!lastTimestamp) lastTimestamp = timestamp;
+
+        const elapsed = timestamp - lastTimestamp;
+        const distance = (SCROLL_SPEED * elapsed) / 1000;
+
+        scrollPositionRef.current = Math.min(scrollPositionRef.current + distance, scrollDistance);
+        content.style.transform = `translateY(-${scrollPositionRef.current}px)`;
+
+        lastTimestamp = timestamp;
+
+        if (scrollPositionRef.current >= scrollDistance) {
+          // Reached bottom - pause for 10 seconds
+          pauseAtBottomTimeout = setTimeout(() => {
+            // Reset to top
+            scrollPositionRef.current = 0;
+            content.style.transform = 'translateY(0)';
+            lastTimestamp = null;
+
+            // Pause at top for 2 seconds then restart
+            pauseAtTopTimeout = setTimeout(() => {
+              startScrolling();
+            }, TOP_PAUSE);
+          }, BOTTOM_PAUSE);
+        } else {
+          animationRef.current = requestAnimationFrame(animate);
+        }
+      };
+
+      animationRef.current = requestAnimationFrame(animate);
     };
-    startTimer = setTimeout(() => {
-      lastTs.current = null;
-      state.current = 'scrolling';
-      RAF.current = requestAnimationFrame(STEP);
-    }, 2000);
+
+    // Initial delay before starting
+    scrollTimeout = setTimeout(() => {
+      startScrolling();
+    }, INITIAL_DELAY);
+
     return () => {
-      if (RAF.current) cancelAnimationFrame(RAF.current);
-      clearTimeout(startTimer); clearTimeout(pauseTimer);
-      state.current = 'idle';
+      clearTimeout(scrollTimeout);
+      clearTimeout(pauseAtBottomTimeout);
+      clearTimeout(pauseAtTopTimeout);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      scrollPositionRef.current = 0;
+      if (content) {
+        content.style.transform = 'translateY(0)';
+      }
     };
-  }, [sentences.length]);
+  }, [paragraph]);
 
   return (
     <div className="display local-forecast-display">
