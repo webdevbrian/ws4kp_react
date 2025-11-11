@@ -102,7 +102,13 @@ const CurrentWeather: React.FC = () => {
                   {weatherData.pressure && (
                     <>
                       <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000' }}>Pressure:</div>
-                      <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000', textAlign: 'right' }}>{weatherData.pressure}</div>
+                      <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000', textAlign: 'right' }}>{weatherData.pressure}"</div>
+                    </>
+                  )}
+                  {weatherData.windChill !== undefined && (
+                    <>
+                      <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000' }}>Wind Chill:</div>
+                      <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000', textAlign: 'right' }}>{weatherData.windChill}°</div>
                     </>
                   )}
                 </div>

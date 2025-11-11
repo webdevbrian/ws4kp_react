@@ -12,6 +12,7 @@ interface WeatherData {
   visibility?: number;
   dewpoint?: number;
   ceiling?: number;
+  windChill?: number;
   icon?: string;
   timestamp?: string;
 }
@@ -113,21 +114,35 @@ export const useWeatherData = () => {
               return Math.round(lowestBase * 3.28084);
             };
 
+            // Calculate wind chill
+            const calculateWindChill = (tempF: number, windSpeedMph: number): number | undefined => {
+              // Wind chill only applies when temp ≤ 50°F and wind > 3mph
+              if (tempF > 50 || windSpeedMph <= 3) return undefined;
+
+              const wc = 35.74 + 0.6215 * tempF - 35.75 * Math.pow(windSpeedMph, 0.16)
+                + 0.4275 * tempF * Math.pow(windSpeedMph, 0.16);
+              return Math.round(wc);
+            };
+
+            const tempF = props.temperature?.value ?
+              Math.round(props.temperature.value * 9/5 + 32) : undefined;
+            const windSpeedMph = toMph(props.windSpeed?.value, (props.windSpeed as any)?.unitCode);
+
             setWeatherData({
-              temperature: props.temperature?.value ?
-                Math.round(props.temperature.value * 9/5 + 32) : undefined,
+              temperature: tempF,
               conditions: props.textDescription,
               humidity: props.relativeHumidity?.value,
-              windSpeed: toMph(props.windSpeed?.value, (props.windSpeed as any)?.unitCode),
+              windSpeed: windSpeedMph,
               windDirection: props.windDirection?.value !== null ?
                 getWindDirection(props.windDirection.value) : undefined,
               pressure: props.barometricPressure?.value ?
-                Math.round((props.barometricPressure.value / 100) * 100) / 100 : undefined,
+                Math.round((props.barometricPressure.value * 0.0002953) * 100) / 100 : undefined,
               visibility: props.visibility?.value ?
                 Math.round(props.visibility.value / 1609.34) : undefined,
               dewpoint: props.dewpoint?.value ?
                 Math.round(props.dewpoint.value * 9/5 + 32) : undefined,
               ceiling: getCeiling(props.cloudLayers),
+              windChill: tempF && windSpeedMph ? calculateWindChill(tempF, windSpeedMph) : undefined,
               icon: props.icon,
               timestamp: props.timestamp,
             });
