@@ -96,22 +96,22 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     if (isPlaying) {
       const interval = setInterval(() => {
         next();
-      }, 10000);
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [isPlaying, next]);
 
   // Persist core navigation states
   useEffect(() => {
-    try { localStorage.setItem('nav.isPlaying', isPlaying ? '1' : '0'); } catch {}
+    try { localStorage.setItem('nav.isPlaying', isPlaying ? '1' : '0'); } catch { }
   }, [isPlaying]);
 
   useEffect(() => {
-    try { localStorage.setItem('nav.currentDisplay', currentDisplay); } catch {}
+    try { localStorage.setItem('nav.currentDisplay', currentDisplay); } catch { }
   }, [currentDisplay]);
 
   useEffect(() => {
-    try { localStorage.setItem('nav.displays', JSON.stringify(displays)); } catch {}
+    try { localStorage.setItem('nav.displays', JSON.stringify(displays)); } catch { }
   }, [displays]);
 
   // Keep currentDisplay valid if the list changes or excludes the current one
