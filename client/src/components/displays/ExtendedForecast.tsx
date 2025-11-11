@@ -16,16 +16,16 @@ const ExtendedForecast: React.FC = () => {
   const iconFor = (short: string, isDay: boolean) => {
     const s = short.toLowerCase();
     if (s.includes('thunder')) return isDay ? 'Scattered-Thunderstorms-Day.gif' : 'Scattered-Thunderstorms-Night.gif';
-    if (s.includes('showers') || s.includes('shower')) return 'Shower.gif';
-    if (s.includes('rain')) return 'Rain.gif';
     if (s.includes('sleet')) return 'Sleet.gif';
     if (s.includes('freezing rain') && s.includes('snow')) return 'Freezing-Rain-Snow.gif';
     if (s.includes('freezing rain')) return 'Freezing-Rain.gif';
     if (s.includes('rain') && s.includes('snow')) return 'Rain-Snow.gif';
     if (s.includes('snow') && s.includes('sleet')) return 'Snow-Sleet.gif';
     if (s.includes('heavy snow')) return 'Heavy-Snow.gif';
-    if (s.includes('light snow')) return 'Light-Snow.gif';
+    if (s.includes('light snow') || (s.includes('snow') && s.includes('shower'))) return 'Light-Snow.gif';
     if (s.includes('snow')) return 'Heavy-Snow.gif';
+    if (s.includes('showers') || s.includes('shower')) return 'Shower.gif';
+    if (s.includes('rain')) return 'Rain.gif';
     if (s.includes('fog')) return 'Fog.gif';
     if (s.includes('smoke')) return 'Smoke.gif';
     if (s.includes('wind')) return 'Windy.gif';
