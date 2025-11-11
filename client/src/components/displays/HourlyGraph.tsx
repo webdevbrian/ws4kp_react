@@ -98,13 +98,13 @@ const HourlyGraph: React.FC = () => {
       </div>
       <div className="main hourly-graph" style={{ marginTop: -90, width: 640, height: 305, position: 'relative', marginLeft: 'auto', marginRight: 'auto' }}>
         {!location && (
-          <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 16, padding: '20px' }}>Enter a location to view hourly graph</div>
+          <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 16, padding: '60px' }}>Enter a location to view hourly graph</div>
         )}
         {loading && (
-          <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 16, padding: '20px' }}>Loading hourly graph...</div>
+          <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 16, padding: '60px' }}>Loading hourly graph...</div>
         )}
         {error && (
-          <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 16, padding: '20px' }}>Error: {error}</div>
+          <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 16, padding: '60px' }}>Error: {error}</div>
         )}
         {data && !loading && (
           <>

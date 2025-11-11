@@ -16,7 +16,7 @@ const Hourly: React.FC = () => {
     let h = d.getHours();
     const ampm = h >= 12 ? 'PM' : 'AM';
     const displayH = h % 12 || 12;
-    return `${wd}, ${displayH} ${ampm}`;
+    return `${wd} ${displayH} ${ampm}`;
   };
 
   const getRegionalMapIcon = (shortForecast?: string, isDay?: boolean) => {
@@ -53,16 +53,40 @@ const Hourly: React.FC = () => {
     return `${base}/Cloudy.gif`;
   };
 
-  const windStatus = (windSpeed: string) => {
-    // Extract the highest numeric value from strings like "5 to 10 mph" or "15 mph"
+  const formatWind = (windDirection: string, windSpeed: string) => {
+    // Extract the numeric value from strings like "5 to 10 mph" or "15 mph"
     const nums = (windSpeed || '').match(/\d+/g)?.map(n => parseInt(n, 10)) || [0];
-    const v = Math.max(...nums);
-    if (v === 0) return 'Calm';
-    if (v <= 10) return 'Light';
-    if (v <= 20) return 'Breezy';
-    if (v <= 30) return 'Windy';
-    if (v <= 40) return 'Gusty';
-    return 'Strong';
+    const speed = Math.max(...nums);
+
+    // If no wind or calm conditions
+    if (speed === 0 || windSpeed.toLowerCase().includes('calm')) {
+      return 'Calm';
+    }
+
+    // Format as "DIR SPEED" like "WNW 8"
+    const dir = windDirection || '';
+    return `${dir} ${speed}`.trim();
+  };
+
+  const calculateFeelsLike = (tempF: number, humidity: number, windSpeedMph: number): number => {
+    // Heat Index calculation (for temp >= 80°F)
+    if (tempF >= 80) {
+      const hi = -42.379 + 2.04901523 * tempF + 10.14333127 * humidity
+        - 0.22475541 * tempF * humidity - 6.83783e-3 * tempF * tempF
+        - 5.481717e-2 * humidity * humidity + 1.22874e-3 * tempF * tempF * humidity
+        + 8.5282e-4 * tempF * humidity * humidity - 1.99e-6 * tempF * tempF * humidity * humidity;
+      return Math.round(hi);
+    }
+
+    // Wind Chill calculation (for temp <= 50°F and wind > 3mph)
+    if (tempF <= 50 && windSpeedMph > 3) {
+      const wc = 35.74 + 0.6215 * tempF - 35.75 * Math.pow(windSpeedMph, 0.16)
+        + 0.4275 * tempF * Math.pow(windSpeedMph, 0.16);
+      return Math.round(wc);
+    }
+
+    // For temperatures between 50-80°F, feels like is approximately the actual temperature
+    return tempF;
   };
 
   const hours = useMemo(() => {
@@ -104,17 +128,17 @@ const Hourly: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 64px 78px 78px 92px', alignItems: 'center', padding: '2px 0 8px', columnGap: 6 }}>
                 <div />
                 <div />
-                <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 16, textShadow: '2px 1px 0 #000', textAlign: 'center' }}>TEMP</div>
-                <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 16, textShadow: '2px 1px 0 #000', textAlign: 'center' }}>LIKE</div>
-                <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 16, textShadow: '2px 1px 0 #000', textAlign: 'left' }}>WIND</div>
+                <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 24, textShadow: '2px 1px 0 #000', textAlign: 'center' }}>TEMP</div>
+                <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 24, textShadow: '2px 1px 0 #000', textAlign: 'center' }}>LIKE</div>
+                <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 24, textShadow: '2px 1px 0 #000', textAlign: 'left' }}>WIND</div>
               </div>
 
               {/* Four stacked rows */}
               <div style={{ display: 'grid', rowGap: 12 }}>
                 {hours.map((h, idx) => (
-                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 64px 78px 78px 92px', alignItems: 'center', columnGap: 6 }}>
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 64px 78px 78px 92px', alignItems: 'center', columnGap: 6, marginBottom: 10 }}>
                     {/* Day, time */}
-                    <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 32, lineHeight: 1, textShadow: '3px 2px 0 #000' }}>
+                    <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 42, lineHeight: 1, textShadow: '3px 2px 0 #000' }}>
                       {formatDayTime(h.startTime)}
                     </div>
                     {/* Icon */}
@@ -122,16 +146,20 @@ const Hourly: React.FC = () => {
                       <img src={getRegionalMapIcon(h.shortForecast, h.isDaytime)} alt={h.shortForecast || 'icon'} style={{ width: 56, height: 42, imageRendering: 'pixelated' }} />
                     </div>
                     {/* Temp */}
-                    <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 32, lineHeight: 1, textAlign: 'center', textShadow: '3px 2px 0 #000' }}>
+                    <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 42, lineHeight: 1, textAlign: 'center', textShadow: '3px 2px 0 #000' }}>
                       {h.temperature}
                     </div>
-                    {/* Like (using temperature for now) */}
-                    <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 32, lineHeight: 1, textAlign: 'center', textShadow: '3px 2px 0 #000' }}>
-                      {h.temperature}
+                    {/* Like (feels-like temperature) */}
+                    <div style={{ color: '#9999ff', fontFamily: 'Star4000', fontSize: 42, lineHeight: 1, textAlign: 'center', textShadow: '3px 2px 0 #000' }}>
+                      {(() => {
+                        const windSpeedMph = parseInt((h.windSpeed || '').match(/\d+/)?.[0] || '0');
+                        const humidity = h.relativeHumidity?.value || 50; // fallback to 50%
+                        return calculateFeelsLike(h.temperature, humidity, windSpeedMph);
+                      })()}
                     </div>
-                    {/* Wind status */}
-                    <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 32, lineHeight: 1, textAlign: 'left', textShadow: '3px 2px 0 #000' }}>
-                      {windStatus(h.windSpeed)}
+                    {/* Wind */}
+                    <div style={{ color: '#ffe600', fontFamily: 'Star4000', fontSize: 42, lineHeight: 1, textAlign: 'left', textShadow: '3px 2px 0 #000' }}>
+                      {formatWind(h.windDirection, h.windSpeed)}
                     </div>
                   </div>
                 ))}

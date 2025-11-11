@@ -20,6 +20,14 @@ interface Period {
     unitCode: string;
     value: number;
   };
+  dewpoint?: {
+    unitCode: string;
+    value: number;
+  };
+  relativeHumidity?: {
+    unitCode: string;
+    value: number;
+  };
   cloudCover?: number; // percent (skyCover)
 }
 
