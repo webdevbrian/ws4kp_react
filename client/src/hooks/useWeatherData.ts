@@ -10,6 +10,8 @@ interface WeatherData {
   windDirection?: string;
   pressure?: number;
   visibility?: number;
+  dewpoint?: number;
+  ceiling?: number;
   icon?: string;
   timestamp?: string;
 }
@@ -95,6 +97,22 @@ export const useWeatherData = () => {
 
             const props = obsData.properties;
 
+            // Parse ceiling from cloudLayers (lowest cloud base height)
+            const getCeiling = (cloudLayers: any[]): number | undefined => {
+              if (!Array.isArray(cloudLayers) || cloudLayers.length === 0) return undefined;
+
+              // Find lowest cloud base that's not "CLR" (clear)
+              const validLayers = cloudLayers.filter(layer =>
+                layer.amount !== 'CLR' && layer.base?.value !== null
+              );
+
+              if (validLayers.length === 0) return undefined;
+
+              const lowestBase = Math.min(...validLayers.map(layer => layer.base.value));
+              // Convert meters to feet
+              return Math.round(lowestBase * 3.28084);
+            };
+
             setWeatherData({
               temperature: props.temperature?.value ?
                 Math.round(props.temperature.value * 9/5 + 32) : undefined,
@@ -107,6 +125,9 @@ export const useWeatherData = () => {
                 Math.round((props.barometricPressure.value / 100) * 100) / 100 : undefined,
               visibility: props.visibility?.value ?
                 Math.round(props.visibility.value / 1609.34) : undefined,
+              dewpoint: props.dewpoint?.value ?
+                Math.round(props.dewpoint.value * 9/5 + 32) : undefined,
+              ceiling: getCeiling(props.cloudLayers),
               icon: props.icon,
               timestamp: props.timestamp,
             });

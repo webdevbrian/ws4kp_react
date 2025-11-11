@@ -80,10 +80,10 @@ const CurrentWeather: React.FC = () => {
                       <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000', textAlign: 'right' }}>{Math.round(weatherData.humidity)}%</div>
                     </>
                   )}
-                  {weatherData.temperature !== undefined && (
+                  {weatherData.dewpoint !== undefined && (
                     <>
                       <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000' }}>Dewpoint:</div>
-                      <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000', textAlign: 'right' }}>--°</div>
+                      <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000', textAlign: 'right' }}>{weatherData.dewpoint}°</div>
                     </>
                   )}
                   {weatherData.visibility !== undefined && (
@@ -92,10 +92,12 @@ const CurrentWeather: React.FC = () => {
                       <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000', textAlign: 'right' }}>{weatherData.visibility} mi.</div>
                     </>
                   )}
-                  {/* Ceiling not available in our data; show placeholder */}
+                  {/* Ceiling data from cloudLayers */}
                   <>
                     <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000' }}>Ceiling:</div>
-                    <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000', textAlign: 'right' }}>--</div>
+                    <div style={{ color: 'white', fontFamily: 'Star4000', fontSize: 22, textShadow: '3px 2px 0 #000', textAlign: 'right' }}>
+                      {weatherData.ceiling !== undefined ? `${weatherData.ceiling} ft` : 'Unlimited'}
+                    </div>
                   </>
                   {weatherData.pressure && (
                     <>
